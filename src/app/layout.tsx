@@ -6,12 +6,14 @@ import { ToastProvider } from "@/context/ToastContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Navbar from "@/components/Navbar";
+import ScrollProgress from "@/components/ScrollProgress";
+import FloatingAIButton from "@/components/FloatingAIButton";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "CampusEvent",
-  description: "Monitor and register for Festivals, Arts, and Sports programs.",
+  title: "EVENTORA AI — College Event Management System",
+  description: "Every Campus Moment, Perfectly Organized. Discover, organize, and participate in college events powered by AI.",
 };
 
 export default function RootLayout({
@@ -21,15 +23,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground transition-colors duration-300`}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <AuthProvider>
             <AppProvider>
               <ToastProvider>
+                <ScrollProgress />
                 <Navbar />
-                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <main>
                   {children}
                 </main>
+                <FloatingAIButton />
               </ToastProvider>
             </AppProvider>
           </AuthProvider>
@@ -38,3 +42,4 @@ export default function RootLayout({
     </html>
   );
 }
+

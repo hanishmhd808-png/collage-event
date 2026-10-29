@@ -7,7 +7,7 @@ import { auth, db } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { StudentProfile, TeacherProfile } from "@/types";
 
-export type Role = "student" | "teacher" | null;
+export type Role = "student" | "teacher" | "organizer" | "faculty" | "admin" | null;
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +17,8 @@ interface AuthContextType {
   loading: boolean;
   loginAsMockStudent: () => void;
   loginAsMockTeacher: () => void;
+  loginAsMockOrganizer: () => void;
+  loginAsMockAdmin: () => void;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   updateStudentProfile: (profile: Omit<StudentProfile, "uid" | "role">) => Promise<void>;
@@ -32,6 +34,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   loginAsMockStudent: () => {},
   loginAsMockTeacher: () => {},
+  loginAsMockOrganizer: () => {},
+  loginAsMockAdmin: () => {},
   loginWithGoogle: async () => {},
   loginWithEmail: async () => {},
   updateStudentProfile: async () => {},
@@ -87,13 +91,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const loginAsMockStudent = () => {
-    setUser({ uid: "mock-student-123", email: "student@college.edu", displayName: "" } as User);
+    setUser({ uid: "mock-student-123", email: "alex.johnson@campus.edu", displayName: "Alex Johnson" } as User);
     setRole("student");
+    setStudentProfile({
+      uid: "mock-student-123",
+      name: "Alex Johnson",
+      registerNumber: "20CS042",
+      className: "CSE-A, 3rd Year",
+      role: "student",
+    });
   };
 
   const loginAsMockTeacher = () => {
-    setUser({ uid: "mock-teacher-456", email: "teacher@college.edu", displayName: "" } as User);
+    setUser({ uid: "mock-teacher-456", email: "prof.sharma@campus.edu", displayName: "Prof. Sharma" } as User);
     setRole("teacher");
+    setTeacherProfile({
+      uid: "mock-teacher-456",
+      name: "Prof. Sharma",
+      role: "teacher",
+    });
+  };
+
+  const loginAsMockOrganizer = () => {
+    setUser({ uid: "mock-organizer-789", email: "tech.club@campus.edu", displayName: "Tech Club Organizer" } as User);
+    setRole("organizer");
+  };
+
+  const loginAsMockAdmin = () => {
+    setUser({ uid: "mock-admin-999", email: "admin@campus.edu", displayName: "Campus Admin" } as User);
+    setRole("admin");
   };
 
   const loginWithGoogle = async () => {
@@ -176,7 +202,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, studentProfile, teacherProfile, loading, loginAsMockStudent, loginAsMockTeacher, loginWithGoogle, loginWithEmail, updateStudentProfile, updateTeacherProfile, logout }}>
+    <AuthContext.Provider value={{ user, role, studentProfile, teacherProfile, loading, loginAsMockStudent, loginAsMockTeacher, loginAsMockOrganizer, loginAsMockAdmin, loginWithGoogle, loginWithEmail, updateStudentProfile, updateTeacherProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );
