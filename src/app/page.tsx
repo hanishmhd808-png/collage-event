@@ -9,11 +9,12 @@ import { useToast } from "@/context/ToastContext";
 import EventCard from "@/components/EventCard";
 import PopupAlert, { PopupAlertProps } from "@/components/PopupAlert";
 import ActivityCustomizerModal from "@/components/ActivityCustomizerModal";
+import CreateEventModal from "@/components/CreateEventModal";
 import {
   Sparkles, ArrowRight, ChevronDown, Zap, Shield, Award,
   Users, Calendar, Star, Mail, Key, Lock, UserCircle, ShieldCheck,
   Cpu, Music, Dumbbell, BookOpen, Briefcase, Camera, Trophy, X,
-  Palette, User, CheckCircle2, Flame, HelpCircle, Info
+  Palette, User, CheckCircle2, Flame, HelpCircle, Info, Plus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -69,6 +70,9 @@ export default function Home() {
   // Customized Arts/Sports Modal State
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [customizerCategory, setCustomizerCategory] = useState<"Arts" | "Sports">("Arts");
+
+  // Create Event Modal State (Customized Image Option)
+  const [createEventOpen, setCreateEventOpen] = useState(false);
 
   // Universal Pop-up Alert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -178,6 +182,28 @@ export default function Home() {
         }}
       />
 
+      {/* Create Event with Customized Image Option Modal */}
+      <CreateEventModal
+        isOpen={createEventOpen}
+        onClose={() => setCreateEventOpen(false)}
+        onSuccess={(eventId, title) => {
+          showAlert({
+            title: "Event Published to Home!",
+            message: `"${title}" has been successfully created with your customized image poster and synced to Cloud Firestore. It is now live in Upcoming Events.`,
+            badge: "Event Live",
+            type: "success",
+            primaryAction: {
+              label: "View Event Details",
+              onClick: () => router.push(`/events/${eventId}`),
+            },
+            secondaryAction: {
+              label: "Manage in Dashboard",
+              onClick: () => router.push("/organizer"),
+            },
+          });
+        }}
+      />
+
       {/* ── HERO ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-16">
         {/* Animated gradient blobs */}
@@ -231,7 +257,7 @@ export default function Home() {
             Discover unforgettable experiences, customize arts & sports activities in single or group formats, and bring your entire campus together.
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }} transition={{ duration: 0.6, delay: 0.9 }} className="flex flex-col sm:flex-row gap-4 justify-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }} transition={{ duration: 0.6, delay: 0.9 }} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/explore">
               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="btn-primary px-8 py-4 text-base flex items-center justify-center gap-2 w-full sm:w-auto">
                 Explore Events <ArrowRight className="w-4 h-4" />
@@ -239,27 +265,37 @@ export default function Home() {
             </Link>
 
             <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setCreateEventOpen(true)}
+              className="px-8 py-4 text-base text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-violet-600/30 border border-violet-500/40 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 transition-all cursor-pointer w-full sm:w-auto"
+            >
+              <Plus className="w-5 h-5 text-white" />
+              <span>Add Event</span>
+            </motion.button>
+
+            <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
               onClick={() => {
                 showAlert({
                   title: "Campus Event Organization",
-                  message: "Are you planning an event? You can publish it directly to the college schedule or use the AI Studio to generate timetables, posters, and itemized budgets.",
+                  message: "Are you planning an event? You can publish it directly to the college schedule with a customized poster banner, or use the AI Studio to generate timetables, posters, and itemized budgets.",
                   badge: "Organizer Hub",
                   type: "action",
                   primaryAction: {
-                    label: "Go to Organizer Hub",
+                    label: "+ Create Event Now",
+                    onClick: () => setCreateEventOpen(true),
+                  },
+                  secondaryAction: {
+                    label: "Go to Organizer Dashboard",
                     onClick: () => {
                       if (!user) loginAsMockOrganizer();
                       router.push("/organizer");
                     },
                   },
-                  secondaryAction: {
-                    label: "Use AI Studio First",
-                    onClick: () => router.push("/ai-studio"),
-                  },
                 });
               }}
-              className="btn-secondary px-8 py-4 text-base text-white border-white/20 hover:border-white/40 flex items-center justify-center gap-2"
+              className="btn-secondary px-8 py-4 text-base text-white border-white/20 hover:border-white/40 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               Organize an Event
             </motion.button>
@@ -572,9 +608,19 @@ export default function Home() {
               <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-blue-400 text-sm font-semibold mb-2 uppercase tracking-widest">Don't Miss Out</motion.p>
               <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-4xl sm:text-5xl font-black text-white">Upcoming Events</motion.h2>
             </div>
-            <Link href="/explore?status=upcoming" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm font-semibold">
-              View All Upcoming <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setCreateEventOpen(true)}
+                className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all border border-blue-400/30 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Add Event
+              </motion.button>
+              <Link href="/explore?status=upcoming" className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors text-xs sm:text-sm font-semibold ml-1">
+                View All <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Interactive Category Filter Pills */}
@@ -597,9 +643,14 @@ export default function Home() {
           {featuredEvents.length === 0 ? (
             <div className="text-center py-16 glass-dark border border-white/10 rounded-3xl p-8">
               <p className="text-white/40 text-sm mb-4">No upcoming events currently in {upcomingCategory}.</p>
-              <button onClick={() => setUpcomingCategory("All")} className="btn-primary text-xs py-2 px-5">
-                View All Upcoming Events
-              </button>
+              <div className="flex items-center justify-center gap-3">
+                <button onClick={() => setUpcomingCategory("All")} className="btn-secondary text-xs py-2 px-5">
+                  View All Upcoming Events
+                </button>
+                <button onClick={() => setCreateEventOpen(true)} className="btn-primary text-xs py-2 px-5 flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Add New Event
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
