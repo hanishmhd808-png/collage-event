@@ -1,8 +1,13 @@
+// Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAOjgtIDX8K7EmjG1dYmaUt7GiYtjk7m78",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "collage-event-a47a9.firebaseapp.com",
@@ -16,8 +21,15 @@ const firebaseConfig = {
 // Initialize Firebase safely for Next.js SSR
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = app ? getAuth(app) : null;
+// Database SDKs connected
 export const db = app ? getFirestore(app) : null;
+export const firestore = db; // Cloud Firestore Database
+export const database = app ? getDatabase(app) : null; // Firebase Realtime Database
+export const rtdb = database;
+
+// Authentication & Cloud Storage SDKs
+export const auth = app ? getAuth(app) : null;
+export const storage = app ? getStorage(app) : null;
 
 // Initialize Analytics safely on client-side only
 export let analytics: any = null;
@@ -28,3 +40,5 @@ if (typeof window !== "undefined") {
     }
   }).catch(() => {});
 }
+
+export default app;
