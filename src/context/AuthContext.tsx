@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { User } from "firebase/auth";
-import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, updateProfile } from "firebase/auth";
 import { auth, db } from "../lib/firebase"; 
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { StudentProfile, TeacherProfile } from "@/types";
@@ -21,7 +21,7 @@ interface AuthContextType {
   loginAsMockAdmin: () => void;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string, name?: string) => Promise<void>;
-  updateStudentProfile: (profile: Omit<StudentProfile, "uid" | "role">) => Promise<void>;
+  updateStudentProfile: (profile: Partial<Omit<StudentProfile, "uid" | "role">> & { name: string }) => Promise<void>;
   updateTeacherProfile: (name: string) => Promise<void>;
   logout: () => void;
 }
@@ -96,19 +96,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     sp: StudentProfile | null = null,
     tp: TeacherProfile | null = null
   ) => {
-    setUser(u);
+    const effectiveDisplayName = sp?.name || tp?.name || u?.displayName || "";
+    const effectiveUser = u ? { ...u, displayName: effectiveDisplayName } : null;
+
+    setUser(effectiveUser);
     setRole(r);
     setStudentProfile(sp);
     setTeacherProfile(tp);
 
     if (typeof window !== "undefined") {
       try {
-        if (u) {
+        if (effectiveUser) {
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
             user: {
-              uid: u.uid,
-              email: u.email || "",
-              displayName: u.displayName || "",
+              uid: effectiveUser.uid,
+              email: effectiveUser.email || "",
+              displayName: effectiveDisplayName,
             },
             role: r,
             studentProfile: sp,
@@ -427,17 +430,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const updateStudentProfile = async (data: Omit<StudentProfile, "uid" | "role">) => {
-    if (user) {
-      const newProfile: StudentProfile = { ...data, uid: user.uid, role: "student" };
-      saveSession(user, "student", newProfile, teacherProfile);
+  const updateStudentProfile = async (data: Partial<Omit<StudentProfile, "uid" | "role">> & { name: string }) => {
+    try {
+      const activeUid = user?.uid || studentProfile?.uid || "mock-student-123";
+      const existingProfile = studentProfile || {
+        uid: activeUid,
+        name: user?.displayName || "Alex Johnson",
+        registerNumber: "20CS101",
+        className: "CSE-A, 3rd Year",
+        role: "student" as const,
+      };
+
+      const finalName = data.name ? data.name.trim() : existingProfile.name;
+      const finalReg = data.registerNumber?.trim() ? data.registerNumber.trim() : existingProfile.registerNumber;
+      const finalClass = data.className?.trim() ? data.className.trim() : existingProfile.className;
+
+      const newProfile: StudentProfile = {
+        ...existingProfile,
+        uid: activeUid,
+        role: "student",
+        name: finalName,
+        registerNumber: finalReg,
+        className: finalClass,
+      };
+
+      const updatedUser = user
+        ? ({ ...user, displayName: finalName } as User)
+        : ({ uid: activeUid, displayName: finalName, email: "student@campus.edu" } as unknown as User);
+
+      // 1. Immediately persist to state & localStorage
+      saveSession(updatedUser, "student", newProfile, teacherProfile);
+
+      // 2. Update Firebase Auth displayName if currentUser exists
+      if (auth?.currentUser) {
+        try {
+          await updateProfile(auth.currentUser, { displayName: finalName });
+        } catch (authErr) {
+          console.warn("Could not update Firebase Auth profile:", authErr);
+        }
+      }
+
+      // 3. Persist to Firestore database
       if (db) {
         try {
-          await setDoc(doc(db, "users", user.uid), newProfile, { merge: true });
+          await setDoc(doc(db, "users", activeUid), {
+            ...newProfile,
+            displayName: finalName,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
         } catch (error) {
           console.error("Failed to save student profile to DB:", error);
         }
       }
+    } catch (err) {
+      console.error("Error in updateStudentProfile:", err);
+      throw err;
     }
   };
 

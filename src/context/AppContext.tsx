@@ -250,6 +250,61 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  // Synchronize student name across registrations and certificates if studentProfile is updated
+  useEffect(() => {
+    if (!user?.uid || !studentProfile?.name) return;
+    const currentName = studentProfile.name.trim();
+    const currentReg = studentProfile.registerNumber?.trim();
+    const currentClass = studentProfile.className?.trim();
+
+    setRegistrations(prev => {
+      let changed = false;
+      const updated = prev.map(r => {
+        if (r.studentId === user.uid || (r as any).studentUid === user.uid) {
+          if (
+            r.studentName !== currentName ||
+            (currentReg && r.registerNumber !== currentReg) ||
+            (currentClass && r.className !== currentClass)
+          ) {
+            changed = true;
+            return {
+              ...r,
+              studentName: currentName,
+              ...(currentReg ? { registerNumber: currentReg } : {}),
+              ...(currentClass ? { className: currentClass } : {}),
+            };
+          }
+        }
+        return r;
+      });
+      if (changed) {
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updated)); } catch {}
+        }
+        return updated;
+      }
+      return prev;
+    });
+
+    setCertificates(prev => {
+      let changed = false;
+      const updated = prev.map(c => {
+        if (c.studentId === user.uid && c.studentName !== currentName) {
+          changed = true;
+          return { ...c, studentName: currentName };
+        }
+        return c;
+      });
+      if (changed) {
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem(STORAGE_KEYS.CERTIFICATES, JSON.stringify(updated)); } catch {}
+        }
+        return updated;
+      }
+      return prev;
+    });
+  }, [user?.uid, studentProfile?.name, studentProfile?.registerNumber, studentProfile?.className]);
+
   // Robust matching for student's registrations
   const myRegistrations = registrations.filter(r => {
     if (!user) return false;

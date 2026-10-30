@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -84,12 +84,22 @@ function QRTicket({
 export default function EventDetailPage() {
   const { id } = useParams() as { id: string };
   const { events, groups, registerForEvent, myRegistrations, favorites, toggleFavorite, addCustomActivity } = useApp();
-  const { user, studentProfile, loginAsMockStudent } = useAuth();
+  const { user, studentProfile, loginAsMockStudent, updateStudentProfile } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
   const [registering, setRegistering] = useState(false);
   const [agreed, setAgreed] = useState(true);
+  const [isEditingStudentName, setIsEditingStudentName] = useState(false);
+  const [editedStudentName, setEditedStudentName] = useState("");
+
+  useEffect(() => {
+    if (studentProfile?.name) {
+      setEditedStudentName(studentProfile.name);
+    } else if (user?.displayName) {
+      setEditedStudentName(user.displayName);
+    }
+  }, [studentProfile?.name, user?.displayName]);
 
   const event = events.find(e => e.id === id);
 
@@ -533,17 +543,66 @@ export default function EventDetailPage() {
                         {/* Student Details Preview */}
                         <div className="space-y-3 pt-2">
                           <div>
-                            <label className="text-white/40 text-xs mb-1 block">Student Name</label>
-                            <input value={studentProfile?.name || ""} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-white/40 text-xs block">Student Name</label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsEditingStudentName(!isEditingStudentName);
+                                  if (!isEditingStudentName) {
+                                    setEditedStudentName(studentProfile?.name || user?.displayName || "");
+                                  }
+                                }}
+                                className="text-xs text-blue-400 hover:text-blue-300 font-semibold"
+                              >
+                                {isEditingStudentName ? "Cancel" : "Change Name"}
+                              </button>
+                            </div>
+                            {isEditingStudentName ? (
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={editedStudentName}
+                                  onChange={e => setEditedStudentName(e.target.value)}
+                                  placeholder="Enter your student name"
+                                  className="w-full glass border border-blue-500/50 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-blue-400"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!editedStudentName.trim()) {
+                                      showToast("Name cannot be empty", "error");
+                                      return;
+                                    }
+                                    try {
+                                      await updateStudentProfile({ name: editedStudentName.trim() });
+                                      setIsEditingStudentName(false);
+                                      showToast("Student name updated!", "success");
+                                    } catch (err: any) {
+                                      showToast(err?.message || "Failed to update name", "error");
+                                    }
+                                  }}
+                                  className="btn-primary px-4 py-2 text-xs font-bold whitespace-nowrap"
+                                >
+                                  Save Name
+                                </button>
+                              </div>
+                            ) : (
+                              <input
+                                value={studentProfile?.name || user?.displayName || "Alex Johnson"}
+                                readOnly
+                                className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70"
+                              />
+                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="text-white/40 text-xs mb-1 block">Register No.</label>
-                              <input value={studentProfile?.registerNumber || "Not set"} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
+                              <input value={studentProfile?.registerNumber || "20CS101"} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
                             </div>
                             <div>
                               <label className="text-white/40 text-xs mb-1 block">Class / Dept</label>
-                              <input value={studentProfile?.className || "Not set"} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
+                              <input value={studentProfile?.className || "CSE-A, 3rd Year"} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
                             </div>
                           </div>
                         </div>

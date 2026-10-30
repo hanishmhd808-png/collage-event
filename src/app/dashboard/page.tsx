@@ -11,7 +11,8 @@ import EventCard from "@/components/EventCard";
 import ActivityCustomizerModal from "@/components/ActivityCustomizerModal";
 import {
   Calendar, Award, Heart, Bell, ArrowRight, Ticket, CheckCircle, Clock,
-  Megaphone, BookOpen, Zap, Palette, Trophy, User, Users, Flame
+  Megaphone, BookOpen, Zap, Palette, Trophy, User, Users, Flame,
+  Edit3, X, Save
 } from "lucide-react";
 
 function timeAgo(iso: string) {
@@ -40,8 +41,22 @@ export default function DashboardPage() {
   const [profileReg, setProfileReg] = useState("");
   const [profileClass, setProfileClass] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [customizerCategory, setCustomizerCategory] = useState<"Arts" | "Sports">("Arts");
+
+  // Keep form inputs synced with active profile
+  useEffect(() => {
+    if (studentProfile) {
+      setProfileName(studentProfile.name || "");
+      setProfileReg(studentProfile.registerNumber || "");
+      setProfileClass(studentProfile.className || "");
+    } else if (user) {
+      setProfileName(user.displayName || user.email?.split("@")[0] || "");
+      setProfileReg("20CS" + Math.floor(100 + Math.random() * 900));
+      setProfileClass("CSE-A, 3rd Year");
+    }
+  }, [studentProfile, user]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/");
@@ -65,11 +80,27 @@ export default function DashboardPage() {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileName || !profileReg || !profileClass) { showToast("Please fill all fields", "error"); return; }
+    if (!profileName.trim()) {
+      showToast("Please enter your student name", "error");
+      return;
+    }
     setSavingProfile(true);
-    await updateStudentProfile({ name: profileName, registerNumber: profileReg, className: profileClass });
-    setSavingProfile(false);
-    showToast("Profile saved!", "success");
+    try {
+      const finalReg = profileReg.trim() || studentProfile?.registerNumber || "20CS" + Math.floor(100 + Math.random() * 900);
+      const finalClass = profileClass.trim() || studentProfile?.className || "CSE-A, 3rd Year";
+      await updateStudentProfile({
+        name: profileName.trim(),
+        registerNumber: finalReg,
+        className: finalClass,
+      });
+      setIsEditingProfile(false);
+      showToast("Student name and profile updated successfully!", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message || "Failed to update profile", "error");
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const stats = [
@@ -84,34 +115,139 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="pt-24 pb-12 px-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(10,132,255,0.1), rgba(191,90,242,0.08))" }}>
         <div className="max-w-7xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <p className="text-white/40 text-sm mb-1">Welcome back 👋</p>
-            <h1 className="text-3xl sm:text-4xl font-black text-white mb-2">
-              {studentProfile?.name ? <span>{studentProfile.name}<span className="gradient-text">!</span></span> : <span className="gradient-text">My Dashboard</span>}
-            </h1>
-            <p className="text-white/40">{studentProfile?.className && `${studentProfile.className} · `}{studentProfile?.registerNumber}</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-white/40 text-sm mb-1">Welcome back 👋</p>
+              <h1 className="text-3xl sm:text-4xl font-black text-white mb-2">
+                {studentProfile?.name ? (
+                  <span>{studentProfile.name}<span className="gradient-text">!</span></span>
+                ) : (
+                  <span className="gradient-text">My Dashboard</span>
+                )}
+              </h1>
+              <p className="text-white/40">
+                {studentProfile?.className && `${studentProfile.className} · `}
+                {studentProfile?.registerNumber || "Campus Student"}
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(!isEditingProfile)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl glass border border-white/20 text-white font-semibold text-sm hover:bg-white/10 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
+              >
+                {isEditingProfile ? (
+                  <>
+                    <X className="w-4 h-4 text-red-400" /> Cancel
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="w-4 h-4 text-blue-400" /> Edit Student Name
+                  </>
+                )}
+              </button>
+            </div>
           </motion.div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-12">
-        {/* Profile setup */}
-        {!studentProfile && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-dark border border-blue-500/20 rounded-3xl p-6" style={{ background: "rgba(10,132,255,0.05)" }}>
-            <h2 className="text-white font-bold text-xl mb-2">Complete Your Profile</h2>
-            <p className="text-white/40 text-sm mb-6">Set up your profile to register for events</p>
+        {/* Profile setup & edit */}
+        {(!studentProfile || isEditingProfile) && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-dark border border-blue-500/30 rounded-3xl p-6 sm:p-8"
+            style={{ background: "linear-gradient(135deg, rgba(10,132,255,0.08), rgba(191,90,242,0.05))" }}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-white font-bold text-xl">
+                    {studentProfile ? "Change Student Name & Details" : "Complete Your Profile"}
+                  </h2>
+                </div>
+                <p className="text-white/50 text-sm">
+                  {studentProfile
+                    ? "Update your student name below. Changes sync automatically with your event registrations, tickets, and certificates."
+                    : "Set up your student profile to register for events"}
+                </p>
+              </div>
+              {isEditingProfile && studentProfile && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  className="text-white/40 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
             <form onSubmit={handleProfileSave} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div><label className="text-white/40 text-xs mb-1.5 block">Full Name</label>
-                <input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Alex Johnson" className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/50" />
+              <div>
+                <label className="text-white/70 text-xs font-semibold mb-1.5 block">Full Name *</label>
+                <input
+                  value={profileName}
+                  onChange={e => setProfileName(e.target.value)}
+                  placeholder="Alex Johnson"
+                  required
+                  className="w-full glass border border-white/15 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/60 transition-colors"
+                />
               </div>
-              <div><label className="text-white/40 text-xs mb-1.5 block">Register Number</label>
-                <input value={profileReg} onChange={e => setProfileReg(e.target.value)} placeholder="20CS001" className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/50" />
+              <div>
+                <label className="text-white/70 text-xs font-semibold mb-1.5 block">Register Number</label>
+                <input
+                  value={profileReg}
+                  onChange={e => setProfileReg(e.target.value)}
+                  placeholder="20CS001"
+                  className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/50"
+                />
               </div>
-              <div><label className="text-white/40 text-xs mb-1.5 block">Class</label>
-                <input value={profileClass} onChange={e => setProfileClass(e.target.value)} placeholder="CSE-A, 3rd Year" className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/50" />
+              <div>
+                <label className="text-white/70 text-xs font-semibold mb-1.5 block">Class</label>
+                <input
+                  value={profileClass}
+                  onChange={e => setProfileClass(e.target.value)}
+                  placeholder="CSE-A, 3rd Year"
+                  className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/50"
+                />
               </div>
-              <div className="sm:col-span-3">
-                <button type="submit" disabled={savingProfile} className="btn-primary px-8 py-3 text-sm">{savingProfile ? "Saving..." : "Save Profile"}</button>
+              <div className="sm:col-span-3 flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="btn-primary px-8 py-3 text-sm flex items-center gap-2 font-bold"
+                >
+                  {savingProfile ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      {studentProfile ? "Update Name & Save" : "Save Profile"}
+                    </>
+                  )}
+                </button>
+                {isEditingProfile && studentProfile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingProfile(false);
+                      setProfileName(studentProfile.name || "");
+                      setProfileReg(studentProfile.registerNumber || "");
+                      setProfileClass(studentProfile.className || "");
+                    }}
+                    className="btn-secondary px-6 py-3 text-sm text-white/70 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
             </form>
           </motion.div>

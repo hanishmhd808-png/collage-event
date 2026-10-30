@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -14,15 +14,27 @@ export default function ProfileSetupModal() {
   const [regNo, setRegNo] = useState("");
   const [className, setClassName] = useState("");
 
+  useEffect(() => {
+    if (studentProfile?.name) {
+      setName(studentProfile.name);
+      setRegNo(studentProfile.registerNumber || "");
+      setClassName(studentProfile.className || "");
+    } else if (user?.displayName) {
+      setName(user.displayName);
+    }
+  }, [studentProfile, user]);
+
   if (role !== "student" || studentProfile) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !regNo || !className) {
-      showToast("Please fill all fields", "error");
+    if (!name.trim()) {
+      showToast("Please enter your full name", "error");
       return;
     }
-    updateStudentProfile({ name, registerNumber: regNo, className });
+    const finalReg = regNo.trim() || "20CS" + Math.floor(100 + Math.random() * 900);
+    const finalClass = className.trim() || "CSE-A, 3rd Year";
+    updateStudentProfile({ name: name.trim(), registerNumber: finalReg, className: finalClass });
     showToast("Profile completed successfully!", "success");
   };
 

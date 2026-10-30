@@ -34,7 +34,7 @@ const ADMIN_LINKS = [
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, role, logout } = useAuth();
+  const { user, role, studentProfile, logout } = useAuth();
   const { unreadCount } = useApp();
   const { theme, setTheme } = useTheme();
   const [scrolled, setScrolled] = useState(false);
@@ -145,7 +145,9 @@ export default function Navbar() {
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
                         <User className="w-3 h-3 text-white" />
                       </div>
-                      <span className="hidden md:block capitalize">{role}</span>
+                      <span className="hidden md:block capitalize font-medium">
+                        {studentProfile?.name || user.displayName || role}
+                      </span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
 
@@ -156,14 +158,32 @@ export default function Navbar() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 8, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-48 glass-dark rounded-2xl p-2 shadow-2xl border border-white/10"
+                          className="absolute right-0 mt-2 w-52 glass-dark rounded-2xl p-2 shadow-2xl border border-white/10"
                           onMouseLeave={() => setProfileOpen(false)}
                         >
+                          <div className="px-3 py-2 border-b border-white/10 mb-1">
+                            <p className="text-white text-xs font-bold truncate">
+                              {studentProfile?.name || user.displayName || "Student"}
+                            </p>
+                            <p className="text-white/40 text-[11px] truncate">
+                              {studentProfile?.registerNumber || user.email || ""}
+                            </p>
+                          </div>
+                          {role === "student" && (
+                            <Link
+                              href="/dashboard"
+                              onClick={() => setProfileOpen(false)}
+                              className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs text-white/80 hover:bg-white/10 transition-colors"
+                            >
+                              <User className="w-3.5 h-3.5 text-blue-400" />
+                              Edit Student Name
+                            </Link>
+                          )}
                           <button
                             onClick={() => { logout(); setProfileOpen(false); router.push("/"); }}
-                            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 transition-colors"
                           >
-                            <LogOut className="w-4 h-4" />
+                            <LogOut className="w-3.5 h-3.5" />
                             Sign Out
                           </button>
                         </motion.div>
