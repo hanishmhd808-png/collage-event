@@ -909,7 +909,7 @@ export default function Home() {
               {[
                 { title: "Platform", links: [{ href: "/explore", label: "Explore Events" }, { href: "/ai-studio", label: "AI Studio" }, { href: "/dashboard", label: "Dashboard" }] },
                 { title: "Resources", links: [{ href: "/certificates", label: "Certificates" }, { href: "/notifications", label: "Notifications" }, { href: "/organizer", label: "Organizer" }] },
-                { title: "Access", links: [{ href: "/login", label: "Sign In / Register" }, { href: "/admin", label: "Admin Suite" }, { href: "/teacher", label: "Faculty Portal" }] },
+                { title: "Access", links: [{ href: "/login", label: "Sign In / Register" }, { href: "/admin", label: "Admin Suite" }, { href: "/faculty", label: "Faculty Portal" }] },
               ].map(col => (
                 <div key={col.title}>
                   <p className="text-white/60 font-semibold text-sm mb-4">{col.title}</p>

@@ -6,11 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
-import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity, Database, RefreshCw, Server } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity, Database, RefreshCw, Server, Plus } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, collection, onSnapshot } from "firebase/firestore";
 import { initialEvents, DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES, initialGroups, mockCertificates } from "@/lib/mockData";
 import { useToast } from "@/context/ToastContext";
+import CreateEventModal from "@/components/CreateEventModal";
 
 const TABS = ["Overview", "Events", "Users", "Analytics", "Database", "Audit Log"];
 
@@ -46,6 +47,7 @@ export default function AdminPage() {
   const [eventSearch, setEventSearch] = useState("");
   const [syncingDb, setSyncingDb] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [createEventOpen, setCreateEventOpen] = useState(false);
   const { showToast } = useToast();
 
   const handleSyncFirestore = async () => {
@@ -125,7 +127,7 @@ export default function AdminPage() {
     <div className="bg-[#0a0a0f] min-h-screen">
       <div className="pt-24 pb-12 px-6" style={{ background: "linear-gradient(135deg, rgba(255,69,58,0.06), rgba(10,132,255,0.06))" }}>
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center gap-3 mb-2">
                 <p className="text-red-400 text-sm font-semibold uppercase tracking-widest">Admin</p>
@@ -134,6 +136,15 @@ export default function AdminPage() {
               <h1 className="text-4xl font-black text-white">Admin Dashboard</h1>
               <p className="text-white/40 mt-1">Full platform oversight and management</p>
             </motion.div>
+
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setCreateEventOpen(true)}
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 border border-red-400/30 transition-all cursor-pointer w-full sm:w-auto"
+            >
+              <Plus className="w-4 h-4" /> Add Campus Event
+            </motion.button>
           </div>
         </div>
       </div>
@@ -202,8 +213,19 @@ export default function AdminPage() {
             {/* Events */}
             {activeTab === "Events" && (
               <div>
-                <div className="flex gap-4 mb-6">
-                  <input value={eventSearch} onChange={e => setEventSearch(e.target.value)} placeholder="Search events..." className="flex-1 glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/30" />
+                <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-stretch sm:items-center">
+                  <input
+                    value={eventSearch}
+                    onChange={e => setEventSearch(e.target.value)}
+                    placeholder="Search events by title or category..."
+                    className="flex-1 glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-white/30 outline-none focus:border-red-500/40"
+                  />
+                  <button
+                    onClick={() => setCreateEventOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 border border-red-400/30 whitespace-nowrap cursor-pointer transition-all"
+                  >
+                    <Plus className="w-4 h-4" /> Add New Event
+                  </button>
                 </div>
                 <div className="glass-dark border border-white/8 rounded-3xl overflow-hidden">
                   <table className="w-full text-sm">
@@ -371,6 +393,15 @@ export default function AdminPage() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Admin Create Event Modal */}
+      <CreateEventModal
+        isOpen={createEventOpen}
+        onClose={() => setCreateEventOpen(false)}
+        onSuccess={(id, title) => {
+          showToast(`Event "${title}" published by Admin!`, "success");
+        }}
+      />
     </div>
   );
 }

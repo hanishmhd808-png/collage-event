@@ -113,7 +113,7 @@ export default function LoginPage() {
       if (targetRole === "teacher") {
         loginAsMockTeacher();
         setSuccessMsg("Authorized as Faculty Evaluator. Redirecting...");
-        setTimeout(() => router.push("/teacher"), 600);
+        setTimeout(() => router.push("/faculty"), 600);
       } else {
         loginAsMockAdmin();
         setSuccessMsg("Authorized as Campus Administrator. Redirecting...");
@@ -559,7 +559,7 @@ export default function LoginPage() {
                   onClick={() => {
                     loginAsMockTeacher();
                     setSuccessMsg("Logged in as Prof. Sharma (Faculty Evaluator). Redirecting...");
-                    setTimeout(() => router.push("/teacher"), 500);
+                    setTimeout(() => router.push("/faculty"), 500);
                   }}
                   className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-amber-500/40 text-left text-xs transition-all group"
                 >

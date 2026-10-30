@@ -9,7 +9,7 @@ import { useApp } from "@/context/AppContext";
 import {
   Sparkles, Bell, Menu, X, Sun, Moon, LogOut, User,
   Calendar, Compass, LayoutDashboard, Zap, Settings,
-  ChevronDown,
+  ChevronDown, Award
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -25,6 +25,10 @@ const STUDENT_LINKS = [
 
 const ORGANIZER_LINKS = [
   { href: "/organizer", label: "Organizer", icon: Settings },
+];
+
+const TEACHER_LINKS = [
+  { href: "/faculty", label: "Faculty", icon: Award },
 ];
 
 const ADMIN_LINKS = [
@@ -52,7 +56,8 @@ export default function Navbar() {
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const getRoleLinks = () => {
-    if (role === "teacher" || role === "admin") return ADMIN_LINKS;
+    if (role === "teacher" || role === "faculty") return TEACHER_LINKS;
+    if (role === "admin") return ADMIN_LINKS;
     if (role === "organizer") return ORGANIZER_LINKS;
     if (role === "student") return STUDENT_LINKS;
     return [];
@@ -177,6 +182,16 @@ export default function Navbar() {
                             >
                               <User className="w-3.5 h-3.5 text-blue-400" />
                               Edit Student Name
+                            </Link>
+                          )}
+                          {(role === "teacher" || role === "faculty") && (
+                            <Link
+                              href="/faculty"
+                              onClick={() => setProfileOpen(false)}
+                              className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-500/10 transition-colors"
+                            >
+                              <Award className="w-3.5 h-3.5 text-amber-400" />
+                              Faculty Portal
                             </Link>
                           )}
                           <button
