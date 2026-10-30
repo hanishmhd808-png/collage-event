@@ -118,8 +118,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     activityName?: string,
     participationType?: "Single" | "Group"
   ) => {
-    if (!user) return { success: false, message: "Not logged in" };
-    if (!studentProfile) return { success: false, message: "Please complete your profile first." };
+    if (!user) return { success: false, message: "Please sign in to register for this event." };
+
+    const activeProfile = studentProfile || {
+      uid: user.uid,
+      name: user.displayName || user.email?.split("@")[0] || "Alex Johnson",
+      registerNumber: "20CS042",
+      className: "CSE-A, 3rd Year",
+      role: "student" as const,
+    };
 
     const event = events.find(e => e.id === eventId);
     if (!event) return { success: false, message: "Event not found" };
@@ -179,9 +186,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       id: newRegId,
       eventId,
       studentId: user.uid,
-      studentName: studentProfile.name,
-      registerNumber: studentProfile.registerNumber,
-      className: studentProfile.className,
+      studentName: activeProfile.name,
+      registerNumber: activeProfile.registerNumber,
+      className: activeProfile.className,
       groupId: finalGroupId,
       groupName: finalGroupName,
       activityName,

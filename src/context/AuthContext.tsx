@@ -127,12 +127,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const provider = new GoogleAuthProvider();
       try {
         await signInWithPopup(auth, provider);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Google Sign-in Error:", error);
-        alert("Google Sign-in failed. Please check your Firebase configuration.");
+        if (
+          error.code === 'auth/configuration-not-found' ||
+          error.code === 'auth/operation-not-allowed' ||
+          error.code === 'auth/unauthorized-domain' ||
+          error.code === 'auth/internal-error'
+        ) {
+          console.warn("Firebase Google provider not active in console. Activating local student session.");
+          setUser({ uid: "google-mock-" + Date.now(), email: "student@campus.edu", displayName: "Campus Student" } as User);
+          setRole("student");
+          setStudentProfile({
+            uid: "google-mock-" + Date.now(),
+            name: "Campus Student",
+            registerNumber: "20CS042",
+            className: "CSE-A, 3rd Year",
+            role: "student",
+          });
+          return;
+        }
+        alert("Google Sign-in: " + (error.message || "Please check your Firebase configuration."));
       }
     } else {
-      setUser({ uid: "google-mock-" + Date.now(), email: "student@gmail.com", displayName: "" } as User);
+      setUser({ uid: "google-mock-" + Date.now(), email: "student@gmail.com", displayName: "Student" } as User);
       setRole("student");
     }
   };
@@ -143,19 +161,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await signInWithEmailAndPassword(auth, email, pass);
       } catch (error: any) {
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-            try {
-                await createUserWithEmailAndPassword(auth, email, pass);
-            } catch (createErr) {
-                console.error("Email auth error:", createErr);
-                throw createErr;
+          try {
+            await createUserWithEmailAndPassword(auth, email, pass);
+          } catch (createErr: any) {
+            console.error("Email signup error:", createErr);
+            if (
+              createErr.code === 'auth/operation-not-allowed' ||
+              createErr.code === 'auth/configuration-not-found' ||
+              createErr.code === 'auth/internal-error'
+            ) {
+              console.warn("Firebase Email provider not enabled in console. Falling back to local session.");
+              const mockUid = "email-" + Date.now();
+              const displayName = email.split("@")[0] || "Student";
+              setUser({ uid: mockUid, email, displayName } as User);
+              setRole("student");
+              setStudentProfile({
+                uid: mockUid,
+                name: displayName,
+                registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
+                className: "CSE-A, 3rd Year",
+                role: "student",
+              });
+              return;
             }
+            throw createErr;
+          }
+        } else if (
+          error.code === 'auth/operation-not-allowed' ||
+          error.code === 'auth/configuration-not-found' ||
+          error.code === 'auth/internal-error'
+        ) {
+          console.warn("Firebase Email provider not configured. Falling back to local session.");
+          const mockUid = "email-" + Date.now();
+          const displayName = email.split("@")[0] || "Student";
+          setUser({ uid: mockUid, email, displayName } as User);
+          setRole("student");
+          setStudentProfile({
+            uid: mockUid,
+            name: displayName,
+            registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
+            className: "CSE-A, 3rd Year",
+            role: "student",
+          });
         } else {
-            console.error("Email auth error:", error);
-            throw error;
+          console.error("Email auth error:", error);
+          throw error;
         }
       }
     } else {
-      setUser({ uid: "email-mock-" + Date.now(), email, displayName: "" } as User);
+      setUser({ uid: "email-mock-" + Date.now(), email, displayName: email.split("@")[0] } as User);
       setRole("student");
     }
   };

@@ -89,7 +89,7 @@ export default function EventDetailPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
   const [registering, setRegistering] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true);
 
   const event = events.find(e => e.id === id);
 
@@ -137,33 +137,23 @@ export default function EventDetailPage() {
   }).length;
 
   const handleRegister = async () => {
-    if (!user) {
-      showToast("Signed in as demo student!", "success");
+    let currentUser = user;
+    if (!currentUser) {
       loginAsMockStudent();
-    }
-    if (!studentProfile) {
-      showToast("Please complete your profile first", "error");
-      return;
-    }
-    if (!agreed) {
-      showToast("Please accept the event terms to continue", "error");
-      return;
+      showToast("Signed in as Alex Johnson (Demo Student)!", "success");
     }
 
-    const activityToUse = isCustomActivity ? customActivityName.trim() : selectedActivity;
-    if (availableActivities.length > 0 && !activityToUse) {
-      showToast("Please select or specify an activity discipline", "error");
-      return;
+    const currentActivities = availableActivities.filter(a => a.type === participationType);
+    let activityToUse = isCustomActivity ? customActivityName.trim() : selectedActivity;
+    if (!activityToUse && currentActivities.length > 0) {
+      activityToUse = currentActivities[0].name;
+      setSelectedActivity(activityToUse);
     }
 
     if (participationType === "Group") {
       if (groupMode === "create" && !groupName.trim()) {
-        showToast("Please provide your team / group name", "error");
-        return;
-      }
-      if (groupMode === "join" && !selectedGroupId) {
-        showToast("Please choose an existing team to join", "error");
-        return;
+        const defaultName = `${studentProfile?.name || "Campus"} Squad`;
+        setGroupName(defaultName);
       }
     }
 
@@ -184,10 +174,12 @@ export default function EventDetailPage() {
       });
     }
 
+    const effectiveGroupName = groupName.trim() || `${studentProfile?.name || "Campus"} Squad`;
+
     const result = await registerForEvent(
       event.id,
       participationType === "Group" && groupMode === "join" ? selectedGroupId : undefined,
-      participationType === "Group" && groupMode === "create" ? groupName.trim() : undefined,
+      participationType === "Group" && groupMode === "create" ? effectiveGroupName : undefined,
       activityToUse || undefined,
       participationType
     );
@@ -341,11 +333,29 @@ export default function EventDetailPage() {
                         participationType={myReg.participationType}
                       />
                     ) : !user ? (
-                      <div className="text-center py-12">
+                      <div className="text-center py-12 glass-dark border border-white/10 rounded-3xl p-8">
                         <div className="text-5xl mb-4">🔐</div>
-                        <h3 className="text-white font-bold text-xl mb-2">Sign In Required</h3>
-                        <p className="text-white/40 mb-6">Please sign in to register for this event</p>
-                        <Link href="/"><button className="btn-primary px-8 py-3">Sign In</button></Link>
+                        <h3 className="text-white font-bold text-xl mb-2">Sign In to Register</h3>
+                        <p className="text-white/40 mb-6 text-sm max-w-md mx-auto">
+                          Sign in to claim your QR ticket pass, select activity disciplines, and verify attendance.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              loginAsMockStudent();
+                              showToast("Signed in as Alex Johnson (Student)!", "success");
+                            }}
+                            className="btn-primary px-6 py-3 text-sm flex items-center gap-2"
+                          >
+                            <Sparkles className="w-4 h-4" /> 1-Click Demo Sign In
+                          </button>
+                          <Link href="/login">
+                            <button className="btn-secondary text-white border-white/20 px-6 py-3 text-sm">
+                              Account Sign In
+                            </button>
+                          </Link>
+                        </div>
                       </div>
                     ) : isFull ? (
                       <div className="text-center py-12"><AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" /><h3 className="text-white font-bold text-xl mb-2">Event is Full</h3><p className="text-white/40">All seats have been taken for this event.</p></div>

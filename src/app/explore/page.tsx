@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/context/AppContext";
 import EventCard from "@/components/EventCard";
@@ -54,12 +54,20 @@ function ExploreContent() {
   const { events } = useApp();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "All";
+  const initialStatus = searchParams.get("status") || "All";
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(initialCategory);
-  const [status, setStatus] = useState("All");
+  const [status, setStatus] = useState(initialStatus);
   const [sort, setSort] = useState<"date" | "popular">("date");
   const [view, setView] = useState<"grid" | "list">("grid");
+
+  useEffect(() => {
+    const c = searchParams.get("category");
+    if (c) setCategory(c);
+    const s = searchParams.get("status");
+    if (s) setStatus(s);
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     let result = [...events];
@@ -73,14 +81,19 @@ function ExploreContent() {
         e.tags?.some(t => t.toLowerCase().includes(q))
       );
     }
-    if (category !== "All") result = result.filter(e => e.category === category);
-    if (status !== "All") result = result.filter(e => e.status === status);
+    if (category !== "All") {
+      result = result.filter(e => e.category.toLowerCase() === category.toLowerCase());
+    }
+    if (status !== "All") {
+      result = result.filter(e => e.status.toLowerCase() === status.toLowerCase());
+    }
     if (sort === "date") result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     if (sort === "popular") result.sort((a, b) => (b.registeredCount || 0) - (a.registeredCount || 0));
     return result;
   }, [events, search, category, status, sort]);
 
   const getCategoryCount = (cat: string) => cat === "All" ? events.length : events.filter(e => e.category === cat).length;
+  const getStatusCount = (s: string) => s === "All" ? events.length : events.filter(e => e.status.toLowerCase() === s.toLowerCase()).length;
 
   return (
     <div className="bg-[#0a0a0f] min-h-screen">
@@ -105,30 +118,53 @@ function ExploreContent() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Filters bar */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
-          {/* Category pills */}
-          <div className="flex-1 overflow-x-auto">
-            <div className="flex gap-2 pb-2">
-              {CATEGORIES.map(cat => (
-                <button key={cat} onClick={() => setCategory(cat)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${category === cat ? "bg-blue-600 text-white" : "glass border border-white/10 text-white/50 hover:text-white hover:border-white/20"}`}
+        <div className="flex flex-col gap-4 mb-8">
+          {/* Status selector tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-white/5">
+            <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl border border-white/5">
+              {[
+                { key: "All", label: "All Events" },
+                { key: "upcoming", label: "🟢 Upcoming Events" },
+                { key: "ongoing", label: "⚡ Ongoing" },
+                { key: "completed", label: "✅ Completed" },
+              ].map(st => (
+                <button
+                  key={st.key}
+                  onClick={() => setStatus(st.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    status.toLowerCase() === st.key.toLowerCase()
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                      : "text-white/50 hover:text-white hover:bg-white/5"
+                  }`}
                 >
-                  {cat} <span className="ml-1 opacity-60">{getCategoryCount(cat)}</span>
+                  <span>{st.label}</span>
+                  <span className="text-[10px] opacity-70">({getStatusCount(st.key)})</span>
                 </button>
               ))}
             </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-2">
+              <select value={sort} onChange={e => setSort(e.target.value as "date" | "popular")} className="glass border border-white/10 rounded-xl px-3 py-1.5 text-white text-xs outline-none bg-transparent">
+                <option value="date" className="bg-[#0a0a0f]">By Date</option>
+                <option value="popular" className="bg-[#0a0a0f]">Most Popular</option>
+              </select>
+              <button onClick={() => setView("grid")} className={`p-2 rounded-xl transition-all ${view === "grid" ? "bg-blue-600 text-white" : "glass border border-white/10 text-white/50"}`}><Grid3X3 className="w-4 h-4" /></button>
+              <button onClick={() => setView("list")} className={`p-2 rounded-xl transition-all ${view === "list" ? "bg-blue-600 text-white" : "glass border border-white/10 text-white/50"}`}><List className="w-4 h-4" /></button>
+            </div>
           </div>
-          {/* Controls */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <select value={status} onChange={e => setStatus(e.target.value)} className="glass border border-white/10 rounded-xl px-3 py-2 text-white text-xs outline-none bg-transparent capitalize">
-              {STATUSES.map(s => <option key={s} value={s} className="bg-[#0a0a0f] capitalize">{s}</option>)}
-            </select>
-            <select value={sort} onChange={e => setSort(e.target.value as "date" | "popular")} className="glass border border-white/10 rounded-xl px-3 py-2 text-white text-xs outline-none bg-transparent">
-              <option value="date" className="bg-[#0a0a0f]">By Date</option>
-              <option value="popular" className="bg-[#0a0a0f]">Most Popular</option>
-            </select>
-            <button onClick={() => setView("grid")} className={`p-2 rounded-xl transition-all ${view === "grid" ? "bg-blue-600 text-white" : "glass border border-white/10 text-white/50"}`}><Grid3X3 className="w-4 h-4" /></button>
-            <button onClick={() => setView("list")} className={`p-2 rounded-xl transition-all ${view === "list" ? "bg-blue-600 text-white" : "glass border border-white/10 text-white/50"}`}><List className="w-4 h-4" /></button>
+
+          {/* Category pills */}
+          <div className="overflow-x-auto">
+            <div className="flex gap-2 pb-2">
+              {CATEGORIES.map(cat => (
+                <button key={cat} onClick={() => setCategory(cat)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${category.toLowerCase() === cat.toLowerCase() ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" : "glass border border-white/10 text-white/50 hover:text-white hover:border-white/20"}`}
+                >
+                  {cat} <span className="ml-1 opacity-60">({getCategoryCount(cat)})</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

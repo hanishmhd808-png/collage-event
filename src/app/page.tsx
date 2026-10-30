@@ -107,7 +107,15 @@ export default function Home() {
     return r.participationType === "Single" || ev?.type === "Individual";
   }).length;
 
-  const featuredEvents = events.filter(e => e.isFeatured || e.status === "upcoming").slice(0, 6);
+  const [upcomingCategory, setUpcomingCategory] = useState("All");
+
+  const featuredEvents = events.filter(e => {
+    const isUpcoming = e.status === "upcoming" || e.isFeatured;
+    if (!isUpcoming) return false;
+    if (upcomingCategory === "All") return true;
+    return e.category.toLowerCase() === upcomingCategory.toLowerCase();
+  }).slice(0, 6);
+
   const categoryCounts = CATEGORIES.map(c => ({
     ...c,
     count: events.filter(e => e.category === c.name).length,
@@ -559,20 +567,48 @@ export default function Home() {
       {/* ── FEATURED EVENTS ── */}
       <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
             <div>
               <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-blue-400 text-sm font-semibold mb-2 uppercase tracking-widest">Don't Miss Out</motion.p>
               <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-4xl sm:text-5xl font-black text-white">Upcoming Events</motion.h2>
             </div>
-            <Link href="/explore" className="hidden sm:flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm font-semibold">
-              View All <ArrowRight className="w-4 h-4" />
+            <Link href="/explore?status=upcoming" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm font-semibold">
+              View All Upcoming <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredEvents.map((event, i) => <EventCard key={event.id} event={event} index={i} />)}
+
+          {/* Interactive Category Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 mb-8">
+            {["All", "Technical", "Cultural", "Sports", "Workshop", "Arts"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setUpcomingCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  upcomingCategory.toLowerCase() === cat.toLowerCase()
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105"
+                    : "glass border border-white/10 text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
+
+          {featuredEvents.length === 0 ? (
+            <div className="text-center py-16 glass-dark border border-white/10 rounded-3xl p-8">
+              <p className="text-white/40 text-sm mb-4">No upcoming events currently in {upcomingCategory}.</p>
+              <button onClick={() => setUpcomingCategory("All")} className="btn-primary text-xs py-2 px-5">
+                View All Upcoming Events
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredEvents.map((event, i) => <EventCard key={event.id} event={event} index={i} />)}
+            </div>
+          )}
+
           <div className="text-center mt-10 sm:hidden">
-            <Link href="/explore"><button className="btn-secondary text-white border-white/20 px-8 py-3">View All Events</button></Link>
+            <Link href="/explore?status=upcoming"><button className="btn-secondary text-white border-white/20 px-8 py-3">View All Upcoming Events</button></Link>
           </div>
         </div>
       </section>

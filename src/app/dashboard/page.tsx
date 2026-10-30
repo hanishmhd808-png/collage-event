@@ -73,10 +73,10 @@ export default function DashboardPage() {
   };
 
   const stats = [
-    { label: "Registered Events", value: myRegistrations.length, icon: Calendar, color: "#0a84ff", bg: "rgba(10,132,255,0.1)" },
-    { label: "Upcoming Events", value: upcomingCount, icon: Clock, color: "#bf5af2", bg: "rgba(191,90,242,0.1)" },
-    { label: "Certificates", value: certificates.length, icon: Award, color: "#30d158", bg: "rgba(48,209,88,0.1)" },
-    { label: "Favorites", value: favorites.length, icon: Heart, color: "#ff453a", bg: "rgba(255,69,58,0.1)" },
+    { label: "Registered Events", value: myRegistrations.length, icon: Calendar, color: "#0a84ff", bg: "rgba(10,132,255,0.1)", href: "#my-events" },
+    { label: "Upcoming Events", value: upcomingCount, icon: Clock, color: "#bf5af2", bg: "rgba(191,90,242,0.1)", href: "/explore?status=upcoming" },
+    { label: "Certificates", value: certificates.length, icon: Award, color: "#30d158", bg: "rgba(48,209,88,0.1)", href: "/certificates" },
+    { label: "Favorites", value: favorites.length, icon: Heart, color: "#ff453a", bg: "rgba(255,69,58,0.1)", href: "/explore" },
   ];
 
   return (
@@ -120,14 +120,21 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((s, i) => (
-            <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="glass-card p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: s.bg }}>
-                  <s.icon className="w-5 h-5" style={{ color: s.color }} />
+            <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+              <Link href={s.href} className="block group">
+                <div className="glass-card p-6 transition-all duration-300 group-hover:border-white/20 group-hover:-translate-y-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: s.bg }}>
+                      <s.icon className="w-5 h-5" style={{ color: s.color }} />
+                    </div>
+                    <span className="text-white/30 text-xs font-semibold group-hover:text-white/70 transition-colors">
+                      View →
+                    </span>
+                  </div>
+                  <p className="text-3xl font-black text-white mb-1">{s.value}</p>
+                  <p className="text-white/40 text-sm group-hover:text-white/70 transition-colors">{s.label}</p>
                 </div>
-              </div>
-              <p className="text-3xl font-black text-white mb-1">{s.value}</p>
-              <p className="text-white/40 text-sm">{s.label}</p>
+              </Link>
             </motion.div>
           ))}
         </div>
@@ -203,7 +210,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* My Events */}
-        <div>
+        <div id="my-events" className="scroll-mt-28">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-white font-bold text-xl">My Registered Events</h2>
             <span className="text-xs text-white/40">Total: {myEventDetails.length} registered</span>
