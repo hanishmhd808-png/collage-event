@@ -71,7 +71,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await loginWithEmail(email, password);
+      await loginWithEmail(email, password, isSignUp ? name : undefined);
       setSuccessMsg(isSignUp ? "Account created successfully! Redirecting..." : "Welcome back! Redirecting...");
       setTimeout(() => router.push("/dashboard"), 700);
     } catch (err: any) {

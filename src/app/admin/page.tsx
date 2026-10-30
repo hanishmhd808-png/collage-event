@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity, Database, RefreshCw, Server } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, onSnapshot } from "firebase/firestore";
 import { initialEvents, DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES, initialGroups, mockCertificates } from "@/lib/mockData";
 import { useToast } from "@/context/ToastContext";
 
@@ -81,12 +81,41 @@ export default function AdminPage() {
   useEffect(() => { if (!loading && !user) router.push("/"); }, [user, loading, router]);
   if (loading || !user) return <div className="bg-[#0a0a0f] min-h-screen flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" /></div>;
 
+  const [dbUsers, setDbUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onSnapshot(
+      collection(db, "users"),
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+              name: d.name || d.displayName || d.email?.split("@")[0] || "User",
+              email: d.email || "—",
+              role: d.role || "student",
+              date: d.lastLoginAt ? new Date(d.lastLoginAt).toLocaleDateString() : (d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "2026-09-01"),
+              status: d.status || "active",
+            };
+          });
+          setDbUsers(list);
+        }
+      },
+      (err) => {
+        console.warn("Could not load users collection:", err);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  const allUsersList = dbUsers.length > 0 ? dbUsers : MOCK_USERS;
   const filteredEvents = events.filter(e => !eventSearch || e.title.toLowerCase().includes(eventSearch.toLowerCase()));
-  const filteredUsers = userRoleFilter === "All" ? MOCK_USERS : MOCK_USERS.filter(u => u.role === userRoleFilter.toLowerCase());
+  const filteredUsers = userRoleFilter === "All" ? allUsersList : allUsersList.filter(u => u.role === userRoleFilter.toLowerCase());
   const categoryStats = ["Technical","Cultural","Sports","Workshop","Seminar","Conference","Placement","Club"].map(cat => ({ cat, count: events.filter(e => e.category === cat).length })).sort((a,b)=>b.count-a.count);
 
   const kpis = [
-    { label: "Total Students", value: "1,247", color: "#0a84ff", icon: Users },
+    { label: "Total Students", value: allUsersList.filter(u=>u.role==="student").length.toString(), color: "#0a84ff", icon: Users },
     { label: "Active Events", value: events.filter(e=>e.status==="upcoming").length.toString(), color: "#bf5af2", icon: Calendar },
     { label: "Total Registrations", value: registrations.length > 0 ? registrations.length.toString() : "4,821", color: "#30d158", icon: Activity },
     { label: "Platform Health", value: "99.9%", color: "#ff9f0a", icon: Shield },

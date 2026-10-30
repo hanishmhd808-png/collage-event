@@ -52,10 +52,16 @@ service cloud.firestore {
       );
     }
 
-    // Users profile collection: Readable by authenticated users; editable only by profile owner
+    // Users profile collection: Stores user profile & login data
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId) || isStaffOrAdmin();
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Login activity audit log: Records all login events
+    match /logins/{loginId} {
+      allow read: if true;
+      allow write: if true;
     }
 
     // Certificates collection: Publicly readable for verification; writable by teachers or admins

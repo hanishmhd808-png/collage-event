@@ -20,7 +20,7 @@ interface AuthContextType {
   loginAsMockOrganizer: () => void;
   loginAsMockAdmin: () => void;
   loginWithGoogle: () => Promise<void>;
-  loginWithEmail: (email: string, pass: string) => Promise<void>;
+  loginWithEmail: (email: string, pass: string, name?: string) => Promise<void>;
   updateStudentProfile: (profile: Omit<StudentProfile, "uid" | "role">) => Promise<void>;
   updateTeacherProfile: (name: string) => Promise<void>;
   logout: () => void;
@@ -50,6 +50,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Store user profile and record login event in Firestore database
+  const recordLoginInDb = async (
+    uid: string,
+    email: string,
+    name: string,
+    targetRole: Role,
+    loginMethod: string,
+    additionalData?: Partial<StudentProfile | TeacherProfile>
+  ) => {
+    if (!db) return;
+    try {
+      const userRef = doc(db, "users", uid);
+      const existing = await getDoc(userRef);
+      const now = new Date().toISOString();
+
+      const profilePayload: any = {
+        uid,
+        email: email || "",
+        name: name || email.split("@")[0] || "Campus User",
+        role: targetRole || "student",
+        lastLoginAt: now,
+        updatedAt: now,
+        status: "active",
+        ...additionalData,
+      };
+
+      if (!existing.exists()) {
+        profilePayload.createdAt = now;
+        if ((targetRole === "student" || !targetRole) && !profilePayload.registerNumber) {
+          profilePayload.registerNumber = "20CS" + Math.floor(100 + Math.random() * 900);
+          profilePayload.className = "CSE-A, 3rd Year";
+        }
+      }
+
+      await setDoc(userRef, profilePayload, { merge: true });
+
+      // Record in logins audit collection
+      const loginId = "login-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
+      await setDoc(doc(db, "logins", loginId), {
+        id: loginId,
+        uid,
+        email: email || "",
+        name: profilePayload.name,
+        role: targetRole || "student",
+        loginMethod,
+        timestamp: now,
+        status: "success",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Web Client",
+      });
+      console.log(`✓ Stored login data in Firestore for ${email || uid} (${loginMethod})`);
+    } catch (err) {
+      console.warn("Failed to store login data in Firestore:", err);
+    }
+  };
+
   // Listen to Auth State
   useEffect(() => {
     if (!auth) {
@@ -59,20 +114,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser && db) {
         setUser(currentUser);
-        // Try to fetch profile from DB
+        // Try to fetch profile from DB or initialize
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
-            setRole(data.role as Role);
-            if (data.role === "student") {
+            const currentRole = (data.role as Role) || "student";
+            setRole(currentRole);
+            if (currentRole === "student") {
               setStudentProfile(data as StudentProfile);
-            } else if (data.role === "teacher") {
+            } else if (currentRole === "teacher" || currentRole === "faculty") {
               setTeacherProfile(data as TeacherProfile);
             }
+            await recordLoginInDb(
+              currentUser.uid,
+              currentUser.email || "",
+              data.name || currentUser.displayName || "",
+              currentRole,
+              "auth_session_restore"
+            );
           } else {
-            // Default to student if no profile exists
+            // New user without DB profile yet: auto-create in Firestore
+            const defaultName = currentUser.displayName || currentUser.email?.split("@")[0] || "Student";
+            const defaultReg = "20CS" + Math.floor(100 + Math.random() * 900);
+            const defaultClass = "CSE-A, 3rd Year";
             setRole("student");
+            const newStudentProf: StudentProfile = {
+              uid: currentUser.uid,
+              name: defaultName,
+              registerNumber: defaultReg,
+              className: defaultClass,
+              role: "student",
+            };
+            setStudentProfile(newStudentProf);
+            await recordLoginInDb(
+              currentUser.uid,
+              currentUser.email || "",
+              defaultName,
+              "student",
+              "new_user_init",
+              newStudentProf
+            );
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
@@ -91,42 +173,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const loginAsMockStudent = () => {
-    setUser({ uid: "mock-student-123", email: "alex.johnson@campus.edu", displayName: "Alex Johnson" } as User);
-    setRole("student");
-    setStudentProfile({
+    const studentData: StudentProfile = {
       uid: "mock-student-123",
       name: "Alex Johnson",
       registerNumber: "20CS042",
       className: "CSE-A, 3rd Year",
       role: "student",
-    });
+    };
+    setUser({ uid: "mock-student-123", email: "alex.johnson@campus.edu", displayName: "Alex Johnson" } as User);
+    setRole("student");
+    setStudentProfile(studentData);
+    recordLoginInDb("mock-student-123", "alex.johnson@campus.edu", "Alex Johnson", "student", "mock_student", studentData);
   };
 
   const loginAsMockTeacher = () => {
-    setUser({ uid: "mock-teacher-456", email: "prof.sharma@campus.edu", displayName: "Prof. Sharma" } as User);
-    setRole("teacher");
-    setTeacherProfile({
+    const teacherData: TeacherProfile = {
       uid: "mock-teacher-456",
       name: "Prof. Sharma",
       role: "teacher",
-    });
+    };
+    setUser({ uid: "mock-teacher-456", email: "prof.sharma@campus.edu", displayName: "Prof. Sharma" } as User);
+    setRole("teacher");
+    setTeacherProfile(teacherData);
+    recordLoginInDb("mock-teacher-456", "prof.sharma@campus.edu", "Prof. Sharma", "teacher", "mock_teacher", teacherData);
   };
 
   const loginAsMockOrganizer = () => {
     setUser({ uid: "mock-organizer-789", email: "tech.club@campus.edu", displayName: "Tech Club Organizer" } as User);
     setRole("organizer");
+    recordLoginInDb("mock-organizer-789", "tech.club@campus.edu", "Tech Club Organizer", "organizer", "mock_organizer");
   };
 
   const loginAsMockAdmin = () => {
     setUser({ uid: "mock-admin-999", email: "admin@campus.edu", displayName: "Campus Admin" } as User);
     setRole("admin");
+    recordLoginInDb("mock-admin-999", "admin@campus.edu", "Campus Admin", "admin", "mock_admin");
   };
 
   const loginWithGoogle = async () => {
     if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
       const provider = new GoogleAuthProvider();
       try {
-        await signInWithPopup(auth, provider);
+        const userCred = await signInWithPopup(auth, provider);
+        if (userCred.user) {
+          const u = userCred.user;
+          const uName = u.displayName || u.email?.split("@")[0] || "Student";
+          await recordLoginInDb(u.uid, u.email || "", uName, "student", "google_oauth");
+        }
       } catch (error: any) {
         console.error("Google Sign-in Error:", error);
         if (
@@ -135,34 +228,62 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           error.code === 'auth/unauthorized-domain' ||
           error.code === 'auth/internal-error'
         ) {
-          console.warn("Firebase Google provider not active in console. Activating local student session.");
-          setUser({ uid: "google-mock-" + Date.now(), email: "student@campus.edu", displayName: "Campus Student" } as User);
-          setRole("student");
-          setStudentProfile({
-            uid: "google-mock-" + Date.now(),
+          console.warn("Firebase Google provider not active in console. Activating local student session with DB sync.");
+          const mockUid = "google-mock-" + Date.now();
+          const studentData: StudentProfile = {
+            uid: mockUid,
             name: "Campus Student",
             registerNumber: "20CS042",
             className: "CSE-A, 3rd Year",
             role: "student",
-          });
+          };
+          setUser({ uid: mockUid, email: "student@campus.edu", displayName: "Campus Student" } as User);
+          setRole("student");
+          setStudentProfile(studentData);
+          await recordLoginInDb(mockUid, "student@campus.edu", "Campus Student", "student", "google_fallback", studentData);
           return;
         }
         alert("Google Sign-in: " + (error.message || "Please check your Firebase configuration."));
       }
     } else {
-      setUser({ uid: "google-mock-" + Date.now(), email: "student@gmail.com", displayName: "Student" } as User);
+      const mockUid = "google-mock-" + Date.now();
+      const studentData: StudentProfile = {
+        uid: mockUid,
+        name: "Student",
+        registerNumber: "20CS042",
+        className: "CSE-A, 3rd Year",
+        role: "student",
+      };
+      setUser({ uid: mockUid, email: "student@gmail.com", displayName: "Student" } as User);
       setRole("student");
+      setStudentProfile(studentData);
+      await recordLoginInDb(mockUid, "student@gmail.com", "Student", "student", "google_mock", studentData);
     }
   };
 
-  const loginWithEmail = async (email: string, pass: string) => {
+  const loginWithEmail = async (email: string, pass: string, name?: string) => {
+    const displayName = name || email.split("@")[0] || "Student";
     if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
       try {
-        await signInWithEmailAndPassword(auth, email, pass);
+        const userCred = await signInWithEmailAndPassword(auth, email, pass);
+        if (userCred.user) {
+          await recordLoginInDb(userCred.user.uid, email, displayName, "student", "email_signin");
+        }
       } catch (error: any) {
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
           try {
-            await createUserWithEmailAndPassword(auth, email, pass);
+            const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+            if (userCred.user) {
+              const studentData: StudentProfile = {
+                uid: userCred.user.uid,
+                name: displayName,
+                registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
+                className: "CSE-A, 3rd Year",
+                role: "student",
+              };
+              setStudentProfile(studentData);
+              await recordLoginInDb(userCred.user.uid, email, displayName, "student", "email_signup", studentData);
+            }
           } catch (createErr: any) {
             console.error("Email signup error:", createErr);
             if (
@@ -170,18 +291,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               createErr.code === 'auth/configuration-not-found' ||
               createErr.code === 'auth/internal-error'
             ) {
-              console.warn("Firebase Email provider not enabled in console. Falling back to local session.");
+              console.warn("Firebase Email provider not enabled in console. Falling back to local session with DB sync.");
               const mockUid = "email-" + Date.now();
-              const displayName = email.split("@")[0] || "Student";
-              setUser({ uid: mockUid, email, displayName } as User);
-              setRole("student");
-              setStudentProfile({
+              const studentData: StudentProfile = {
                 uid: mockUid,
                 name: displayName,
                 registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
                 className: "CSE-A, 3rd Year",
                 role: "student",
-              });
+              };
+              setUser({ uid: mockUid, email, displayName } as User);
+              setRole("student");
+              setStudentProfile(studentData);
+              await recordLoginInDb(mockUid, email, displayName, "student", "email_signup_fallback", studentData);
               return;
             }
             throw createErr;
@@ -191,26 +313,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           error.code === 'auth/configuration-not-found' ||
           error.code === 'auth/internal-error'
         ) {
-          console.warn("Firebase Email provider not configured. Falling back to local session.");
+          console.warn("Firebase Email provider not configured. Falling back to local session with DB sync.");
           const mockUid = "email-" + Date.now();
-          const displayName = email.split("@")[0] || "Student";
-          setUser({ uid: mockUid, email, displayName } as User);
-          setRole("student");
-          setStudentProfile({
+          const studentData: StudentProfile = {
             uid: mockUid,
             name: displayName,
             registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
             className: "CSE-A, 3rd Year",
             role: "student",
-          });
+          };
+          setUser({ uid: mockUid, email, displayName } as User);
+          setRole("student");
+          setStudentProfile(studentData);
+          await recordLoginInDb(mockUid, email, displayName, "student", "email_signin_fallback", studentData);
         } else {
           console.error("Email auth error:", error);
           throw error;
         }
       }
     } else {
-      setUser({ uid: "email-mock-" + Date.now(), email, displayName: email.split("@")[0] } as User);
+      const mockUid = "email-mock-" + Date.now();
+      const studentData: StudentProfile = {
+        uid: mockUid,
+        name: displayName,
+        registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
+        className: "CSE-A, 3rd Year",
+        role: "student",
+      };
+      setUser({ uid: mockUid, email, displayName } as User);
       setRole("student");
+      setStudentProfile(studentData);
+      await recordLoginInDb(mockUid, email, displayName, "student", "email_mock", studentData);
     }
   };
 
