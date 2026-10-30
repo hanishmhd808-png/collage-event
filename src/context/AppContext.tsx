@@ -36,7 +36,8 @@ interface AppContextType {
     groupId?: string,
     groupName?: string,
     activityName?: string,
-    participationType?: "Single" | "Group"
+    participationType?: "Single" | "Group",
+    customDetails?: { studentName?: string; registerNumber?: string; className?: string }
   ) => Promise<{ success: boolean; message: string }>;
   addCustomActivity: (eventId: string, activity: ActivityOption) => void;
   markNotificationRead: (id: string) => void;
@@ -316,15 +317,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     groupId?: string,
     groupName?: string,
     activityName?: string,
-    participationType?: "Single" | "Group"
+    participationType?: "Single" | "Group",
+    customDetails?: { studentName?: string; registerNumber?: string; className?: string }
   ) => {
     if (!user) return { success: false, message: "Please sign in to register for this event." };
 
-    const activeProfile = studentProfile || {
+    const activeProfile = {
       uid: user.uid,
-      name: user.displayName || user.email?.split("@")[0] || "Alex Johnson",
-      registerNumber: "20CS042",
-      className: "CSE-A, 3rd Year",
+      name: customDetails?.studentName?.trim() || studentProfile?.name || user.displayName || user.email?.split("@")[0] || "Alex Johnson",
+      registerNumber: customDetails?.registerNumber?.trim() || studentProfile?.registerNumber || "20CS042",
+      className: customDetails?.className?.trim() || studentProfile?.className || "CSE-A, 3rd Year",
       role: "student" as const,
     };
 

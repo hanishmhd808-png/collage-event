@@ -20,7 +20,7 @@ interface AuthContextType {
   loginAsMockOrganizer: () => void;
   loginAsMockAdmin: () => void;
   loginWithGoogle: () => Promise<void>;
-  loginWithEmail: (email: string, pass: string, name?: string) => Promise<void>;
+  loginWithEmail: (email: string, pass: string, name?: string, registerNumber?: string, className?: string) => Promise<void>;
   updateStudentProfile: (profile: Partial<Omit<StudentProfile, "uid" | "role">> & { name: string }) => Promise<void>;
   updateTeacherProfile: (name: string) => Promise<void>;
   logout: () => void;
@@ -346,8 +346,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const loginWithEmail = async (email: string, pass: string, name?: string) => {
+  const loginWithEmail = async (
+    email: string,
+    pass: string,
+    name?: string,
+    registerNumber?: string,
+    className?: string
+  ) => {
     const displayName = name || email.split("@")[0] || "Student";
+    const studentReg = registerNumber?.trim() || "20CS" + Math.floor(100 + Math.random() * 900);
+    const studentClass = className?.trim() || "CSE-A, 3rd Year";
+
     if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
       try {
         const userCred = await signInWithEmailAndPassword(auth, email, pass);
@@ -363,8 +372,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               const studentData: StudentProfile = {
                 uid: userCred.user.uid,
                 name: displayName,
-                registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
-                className: "CSE-A, 3rd Year",
+                registerNumber: studentReg,
+                className: studentClass,
                 role: "student",
               };
               saveSession(userCred.user, "student", studentData, null);
@@ -382,8 +391,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               const studentData: StudentProfile = {
                 uid: mockUid,
                 name: displayName,
-                registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
-                className: "CSE-A, 3rd Year",
+                registerNumber: studentReg,
+                className: studentClass,
                 role: "student",
               };
               const mockUser = { uid: mockUid, email, displayName } as User;
@@ -403,8 +412,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const studentData: StudentProfile = {
             uid: mockUid,
             name: displayName,
-            registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
-            className: "CSE-A, 3rd Year",
+            registerNumber: studentReg,
+            className: studentClass,
             role: "student",
           };
           const mockUser = { uid: mockUid, email, displayName } as User;
@@ -420,8 +429,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const studentData: StudentProfile = {
         uid: mockUid,
         name: displayName,
-        registerNumber: "20CS" + Math.floor(100 + Math.random() * 900),
-        className: "CSE-A, 3rd Year",
+        registerNumber: studentReg,
+        className: studentClass,
         role: "student",
       };
       const mockUser = { uid: mockUid, email, displayName } as User;

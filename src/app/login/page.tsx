@@ -44,6 +44,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [regNo, setRegNo] = useState("");
+  const [className, setClassName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -71,7 +73,13 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await loginWithEmail(email, password, isSignUp ? name : undefined);
+      await loginWithEmail(
+        email,
+        password,
+        isSignUp ? name : undefined,
+        isSignUp ? regNo : undefined,
+        isSignUp ? className : undefined
+      );
       setSuccessMsg(isSignUp ? "Account created successfully! Redirecting..." : "Welcome back! Redirecting...");
       setTimeout(() => router.push("/dashboard"), 700);
     } catch (err: any) {
@@ -226,19 +234,44 @@ export default function LoginPage() {
             <div>
               <form onSubmit={handleStudentAuth} className="space-y-3.5 mb-5">
                 {isSignUp && (
-                  <div>
-                    <label className="block text-xs font-medium text-white/60 mb-1.5">Full Name</label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Alex Johnson"
-                        className="w-full glass border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-blue-500/50 transition-colors"
-                      />
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-white/60 mb-1.5">Full Name</label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Alex Johnson"
+                          className="w-full glass border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-blue-500/50 transition-colors"
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-white/60 mb-1.5">Register Number</label>
+                        <input
+                          type="text"
+                          value={regNo}
+                          onChange={(e) => setRegNo(e.target.value)}
+                          placeholder="e.g. 20CS042"
+                          className="w-full glass border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-blue-500/50 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-white/60 mb-1.5">Class / Department</label>
+                        <input
+                          type="text"
+                          value={className}
+                          onChange={(e) => setClassName(e.target.value)}
+                          placeholder="e.g. CSE-A, 3rd Year"
+                          className="w-full glass border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-blue-500/50 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 <div>

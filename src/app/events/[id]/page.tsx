@@ -9,7 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import {
   Calendar, MapPin, Users, Clock, Award, ChevronLeft, Share2, Heart,
-  CheckCircle, AlertCircle, Ticket, User, Palette, Trophy, Sparkles
+  CheckCircle, AlertCircle, Ticket, User, Palette, Trophy, Sparkles,
+  Edit3, Check
 } from "lucide-react";
 import { DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES } from "@/lib/mockData";
 
@@ -90,16 +91,22 @@ export default function EventDetailPage() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [registering, setRegistering] = useState(false);
   const [agreed, setAgreed] = useState(true);
-  const [isEditingStudentName, setIsEditingStudentName] = useState(false);
+  const [isEditingStudentDetails, setIsEditingStudentDetails] = useState(false);
   const [editedStudentName, setEditedStudentName] = useState("");
+  const [editedRegisterNumber, setEditedRegisterNumber] = useState("");
+  const [editedClassName, setEditedClassName] = useState("");
 
   useEffect(() => {
-    if (studentProfile?.name) {
-      setEditedStudentName(studentProfile.name);
-    } else if (user?.displayName) {
-      setEditedStudentName(user.displayName);
+    if (studentProfile) {
+      setEditedStudentName(studentProfile.name || "");
+      setEditedRegisterNumber(studentProfile.registerNumber || "");
+      setEditedClassName(studentProfile.className || "");
+    } else if (user) {
+      setEditedStudentName(user.displayName || user.email?.split("@")[0] || "");
+      setEditedRegisterNumber("20CS101");
+      setEditedClassName("CSE-A, 3rd Year");
     }
-  }, [studentProfile?.name, user?.displayName]);
+  }, [studentProfile, user]);
 
   const event = events.find(e => e.id === id);
 
@@ -184,14 +191,32 @@ export default function EventDetailPage() {
       });
     }
 
-    const effectiveGroupName = groupName.trim() || `${studentProfile?.name || "Campus"} Squad`;
+    const finalName = editedStudentName.trim() || studentProfile?.name || user?.displayName || "Alex Johnson";
+    const finalReg = editedRegisterNumber.trim() || studentProfile?.registerNumber || "20CS101";
+    const finalClass = editedClassName.trim() || studentProfile?.className || "CSE-A, 3rd Year";
+
+    if (
+      studentProfile &&
+      (finalName !== studentProfile.name ||
+        finalReg !== studentProfile.registerNumber ||
+        finalClass !== studentProfile.className)
+    ) {
+      await updateStudentProfile({
+        name: finalName,
+        registerNumber: finalReg,
+        className: finalClass,
+      });
+    }
+
+    const effectiveGroupName = groupName.trim() || `${finalName} Squad`;
 
     const result = await registerForEvent(
       event.id,
       participationType === "Group" && groupMode === "join" ? selectedGroupId : undefined,
       participationType === "Group" && groupMode === "create" ? effectiveGroupName : undefined,
       activityToUse || undefined,
-      participationType
+      participationType,
+      { studentName: finalName, registerNumber: finalReg, className: finalClass }
     );
 
     setRegistering(false);
@@ -540,71 +565,139 @@ export default function EventDetailPage() {
                           </div>
                         )}
 
-                        {/* Student Details Preview */}
-                        <div className="space-y-3 pt-2">
-                          <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <label className="text-white/40 text-xs block">Student Name</label>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsEditingStudentName(!isEditingStudentName);
-                                  if (!isEditingStudentName) {
-                                    setEditedStudentName(studentProfile?.name || user?.displayName || "");
-                                  }
-                                }}
-                                className="text-xs text-blue-400 hover:text-blue-300 font-semibold"
-                              >
-                                {isEditingStudentName ? "Cancel" : "Change Name"}
-                              </button>
-                            </div>
-                            {isEditingStudentName ? (
-                              <div className="flex gap-2">
+                        {/* Student Details (Editable) */}
+                        <div className="space-y-3 pt-2 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                          <div className="flex items-center justify-between">
+                            <label className="text-white/70 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                              <User className="w-3.5 h-3.5 text-blue-400" />
+                              Student Credentials
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingStudentDetails(!isEditingStudentDetails);
+                                if (!isEditingStudentDetails && studentProfile) {
+                                  setEditedStudentName(studentProfile.name || "");
+                                  setEditedRegisterNumber(studentProfile.registerNumber || "");
+                                  setEditedClassName(studentProfile.className || "");
+                                }
+                              }}
+                              className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              {isEditingStudentDetails ? "Done / Close" : "Edit Credentials"}
+                            </button>
+                          </div>
+
+                          {isEditingStudentDetails ? (
+                            <div className="space-y-3 pt-1">
+                              <div>
+                                <label className="text-white/60 text-xs mb-1 block">Full Name *</label>
                                 <input
                                   type="text"
                                   value={editedStudentName}
                                   onChange={e => setEditedStudentName(e.target.value)}
-                                  placeholder="Enter your student name"
+                                  placeholder="e.g. Alex Johnson"
                                   className="w-full glass border border-blue-500/50 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-blue-400"
                                 />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-white/60 text-xs mb-1 block">Register No. *</label>
+                                  <input
+                                    type="text"
+                                    value={editedRegisterNumber}
+                                    onChange={e => setEditedRegisterNumber(e.target.value)}
+                                    placeholder="e.g. 20CS101"
+                                    className="w-full glass border border-blue-500/50 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-blue-400"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-white/60 text-xs mb-1 block">Class / Dept *</label>
+                                  <input
+                                    type="text"
+                                    value={editedClassName}
+                                    onChange={e => setEditedClassName(e.target.value)}
+                                    placeholder="e.g. CSE-A, 3rd Year"
+                                    className="w-full glass border border-blue-500/50 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-blue-400"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 pt-1">
                                 <button
                                   type="button"
                                   onClick={async () => {
                                     if (!editedStudentName.trim()) {
-                                      showToast("Name cannot be empty", "error");
+                                      showToast("Student name cannot be empty", "error");
                                       return;
                                     }
                                     try {
-                                      await updateStudentProfile({ name: editedStudentName.trim() });
-                                      setIsEditingStudentName(false);
-                                      showToast("Student name updated!", "success");
+                                      const finalReg = editedRegisterNumber.trim() || studentProfile?.registerNumber || "20CS101";
+                                      const finalClass = editedClassName.trim() || studentProfile?.className || "CSE-A, 3rd Year";
+                                      await updateStudentProfile({
+                                        name: editedStudentName.trim(),
+                                        registerNumber: finalReg,
+                                        className: finalClass,
+                                      });
+                                      setIsEditingStudentDetails(false);
+                                      showToast("Student credentials saved!", "success");
                                     } catch (err: any) {
-                                      showToast(err?.message || "Failed to update name", "error");
+                                      showToast(err?.message || "Failed to update details", "error");
                                     }
                                   }}
-                                  className="btn-primary px-4 py-2 text-xs font-bold whitespace-nowrap"
+                                  className="flex-1 btn-primary py-2 text-xs font-bold"
                                 >
-                                  Save Name
+                                  Save Credentials
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsEditingStudentDetails(false);
+                                    if (studentProfile) {
+                                      setEditedStudentName(studentProfile.name || "");
+                                      setEditedRegisterNumber(studentProfile.registerNumber || "");
+                                      setEditedClassName(studentProfile.className || "");
+                                    }
+                                  }}
+                                  className="px-4 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white text-xs font-semibold"
+                                >
+                                  Cancel
                                 </button>
                               </div>
-                            ) : (
-                              <input
-                                value={studentProfile?.name || user?.displayName || "Alex Johnson"}
-                                readOnly
-                                className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70"
-                              />
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-white/40 text-xs mb-1 block">Register No.</label>
-                              <input value={studentProfile?.registerNumber || "20CS101"} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
                             </div>
-                            <div>
-                              <label className="text-white/40 text-xs mb-1 block">Class / Dept</label>
-                              <input value={studentProfile?.className || "CSE-A, 3rd Year"} readOnly className="w-full glass border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm opacity-70" />
+                          ) : (
+                            <div className="space-y-2.5">
+                              <div>
+                                <label className="text-white/40 text-[11px] mb-1 block">Student Name</label>
+                                <input
+                                  value={editedStudentName || studentProfile?.name || user?.displayName || "Alex Johnson"}
+                                  readOnly
+                                  className="w-full glass border border-white/10 rounded-xl px-4 py-2 text-white text-sm opacity-80"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-white/40 text-[11px] mb-1 block">Register No.</label>
+                                  <input
+                                    value={editedRegisterNumber || studentProfile?.registerNumber || "20CS101"}
+                                    readOnly
+                                    className="w-full glass border border-white/10 rounded-xl px-4 py-2 text-white text-sm opacity-80"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-white/40 text-[11px] mb-1 block">Class / Dept</label>
+                                  <input
+                                    value={editedClassName || studentProfile?.className || "CSE-A, 3rd Year"}
+                                    readOnly
+                                    className="w-full glass border border-white/10 rounded-xl px-4 py-2 text-white text-sm opacity-80"
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-white/40 pt-1">
+                                Click <strong className="text-blue-400">Edit Credentials</strong> to change your name, register number, or class before registering.
+                              </p>
                             </div>
-                          </div>
+                          )}
                         </div>
 
                         <label className="flex items-start gap-3 cursor-pointer">
