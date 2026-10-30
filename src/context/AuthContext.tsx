@@ -26,6 +26,8 @@ interface AuthContextType {
   logout: () => void;
 }
 
+const SESSION_STORAGE_KEY = "eventora_auth_session";
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
@@ -44,11 +46,83 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<Role>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
-  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
+  // Synchronous initialization from localStorage to prevent logout/flicker on page refresh
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) return JSON.parse(saved).user;
+      } catch {}
+    }
+    return null;
+  });
+
+  const [role, setRole] = useState<Role>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) return JSON.parse(saved).role;
+      } catch {}
+    }
+    return null;
+  });
+
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) return JSON.parse(saved).studentProfile;
+      } catch {}
+    }
+    return null;
+  });
+
+  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) return JSON.parse(saved).teacherProfile;
+      } catch {}
+    }
+    return null;
+  });
+
   const [loading, setLoading] = useState(true);
+
+  // Helper to persist auth session to localStorage and state
+  const saveSession = (
+    u: any,
+    r: Role,
+    sp: StudentProfile | null = null,
+    tp: TeacherProfile | null = null
+  ) => {
+    setUser(u);
+    setRole(r);
+    setStudentProfile(sp);
+    setTeacherProfile(tp);
+
+    if (typeof window !== "undefined") {
+      try {
+        if (u) {
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+            user: {
+              uid: u.uid,
+              email: u.email || "",
+              displayName: u.displayName || "",
+            },
+            role: r,
+            studentProfile: sp,
+            teacherProfile: tp,
+            savedAt: Date.now(),
+          }));
+        } else {
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+      } catch (err) {
+        console.warn("Could not write session to localStorage:", err);
+      }
+    }
+  };
 
   // Store user profile and record login event in Firestore database
   const recordLoginInDb = async (
@@ -112,59 +186,70 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser && db) {
-        setUser(currentUser);
-        // Try to fetch profile from DB or initialize
-        try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            const currentRole = (data.role as Role) || "student";
-            setRole(currentRole);
-            if (currentRole === "student") {
-              setStudentProfile(data as StudentProfile);
-            } else if (currentRole === "teacher" || currentRole === "faculty") {
-              setTeacherProfile(data as TeacherProfile);
+      if (currentUser) {
+        let currentRole: Role = "student";
+        let activeStudentProf: StudentProfile | null = studentProfile;
+        let activeTeacherProf: TeacherProfile | null = teacherProfile;
+
+        if (db) {
+          try {
+            const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              currentRole = (data.role as Role) || "student";
+              if (currentRole === "student") {
+                activeStudentProf = data as StudentProfile;
+              } else if (currentRole === "teacher" || currentRole === "faculty") {
+                activeTeacherProf = data as TeacherProfile;
+              }
+            } else {
+              // New user without DB profile yet: auto-create in Firestore
+              const defaultName = currentUser.displayName || currentUser.email?.split("@")[0] || "Student";
+              const defaultReg = "20CS" + Math.floor(100 + Math.random() * 900);
+              const defaultClass = "CSE-A, 3rd Year";
+              activeStudentProf = {
+                uid: currentUser.uid,
+                name: defaultName,
+                registerNumber: defaultReg,
+                className: defaultClass,
+                role: "student",
+              };
+              await recordLoginInDb(
+                currentUser.uid,
+                currentUser.email || "",
+                defaultName,
+                "student",
+                "new_user_init",
+                activeStudentProf
+              );
             }
-            await recordLoginInDb(
-              currentUser.uid,
-              currentUser.email || "",
-              data.name || currentUser.displayName || "",
-              currentRole,
-              "auth_session_restore"
-            );
-          } else {
-            // New user without DB profile yet: auto-create in Firestore
-            const defaultName = currentUser.displayName || currentUser.email?.split("@")[0] || "Student";
-            const defaultReg = "20CS" + Math.floor(100 + Math.random() * 900);
-            const defaultClass = "CSE-A, 3rd Year";
-            setRole("student");
-            const newStudentProf: StudentProfile = {
-              uid: currentUser.uid,
-              name: defaultName,
-              registerNumber: defaultReg,
-              className: defaultClass,
-              role: "student",
-            };
-            setStudentProfile(newStudentProf);
-            await recordLoginInDb(
-              currentUser.uid,
-              currentUser.email || "",
-              defaultName,
-              "student",
-              "new_user_init",
-              newStudentProf
-            );
+          } catch (error) {
+            console.error("Error fetching user profile:", error);
           }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setRole("student");
         }
+
+        saveSession(currentUser, currentRole, activeStudentProf, activeTeacherProf);
       } else {
-        setUser(null);
-        setRole(null);
-        setStudentProfile(null);
-        setTeacherProfile(null);
+        // If Firebase Auth currentUser is null, check if a local session was saved in localStorage
+        if (typeof window !== "undefined") {
+          try {
+            const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed && parsed.user) {
+                // Preserve local/mock session across refresh
+                setUser(parsed.user as User);
+                setRole(parsed.role || "student");
+                if (parsed.studentProfile) setStudentProfile(parsed.studentProfile);
+                if (parsed.teacherProfile) setTeacherProfile(parsed.teacherProfile);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch {}
+        }
+        // No local session found either
+        saveSession(null, null, null, null);
       }
       setLoading(false);
     });
@@ -180,9 +265,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       className: "CSE-A, 3rd Year",
       role: "student",
     };
-    setUser({ uid: "mock-student-123", email: "alex.johnson@campus.edu", displayName: "Alex Johnson" } as User);
-    setRole("student");
-    setStudentProfile(studentData);
+    const mockUser = { uid: "mock-student-123", email: "alex.johnson@campus.edu", displayName: "Alex Johnson" } as User;
+    saveSession(mockUser, "student", studentData, null);
     recordLoginInDb("mock-student-123", "alex.johnson@campus.edu", "Alex Johnson", "student", "mock_student", studentData);
   };
 
@@ -192,21 +276,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       name: "Prof. Sharma",
       role: "teacher",
     };
-    setUser({ uid: "mock-teacher-456", email: "prof.sharma@campus.edu", displayName: "Prof. Sharma" } as User);
-    setRole("teacher");
-    setTeacherProfile(teacherData);
+    const mockUser = { uid: "mock-teacher-456", email: "prof.sharma@campus.edu", displayName: "Prof. Sharma" } as User;
+    saveSession(mockUser, "teacher", null, teacherData);
     recordLoginInDb("mock-teacher-456", "prof.sharma@campus.edu", "Prof. Sharma", "teacher", "mock_teacher", teacherData);
   };
 
   const loginAsMockOrganizer = () => {
-    setUser({ uid: "mock-organizer-789", email: "tech.club@campus.edu", displayName: "Tech Club Organizer" } as User);
-    setRole("organizer");
+    const mockUser = { uid: "mock-organizer-789", email: "tech.club@campus.edu", displayName: "Tech Club Organizer" } as User;
+    saveSession(mockUser, "organizer", null, null);
     recordLoginInDb("mock-organizer-789", "tech.club@campus.edu", "Tech Club Organizer", "organizer", "mock_organizer");
   };
 
   const loginAsMockAdmin = () => {
-    setUser({ uid: "mock-admin-999", email: "admin@campus.edu", displayName: "Campus Admin" } as User);
-    setRole("admin");
+    const mockUser = { uid: "mock-admin-999", email: "admin@campus.edu", displayName: "Campus Admin" } as User;
+    saveSession(mockUser, "admin", null, null);
     recordLoginInDb("mock-admin-999", "admin@campus.edu", "Campus Admin", "admin", "mock_admin");
   };
 
@@ -218,6 +301,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (userCred.user) {
           const u = userCred.user;
           const uName = u.displayName || u.email?.split("@")[0] || "Student";
+          saveSession(u, "student", studentProfile, null);
           await recordLoginInDb(u.uid, u.email || "", uName, "student", "google_oauth");
         }
       } catch (error: any) {
@@ -237,9 +321,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             className: "CSE-A, 3rd Year",
             role: "student",
           };
-          setUser({ uid: mockUid, email: "student@campus.edu", displayName: "Campus Student" } as User);
-          setRole("student");
-          setStudentProfile(studentData);
+          const mockUser = { uid: mockUid, email: "student@campus.edu", displayName: "Campus Student" } as User;
+          saveSession(mockUser, "student", studentData, null);
           await recordLoginInDb(mockUid, "student@campus.edu", "Campus Student", "student", "google_fallback", studentData);
           return;
         }
@@ -254,9 +337,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         className: "CSE-A, 3rd Year",
         role: "student",
       };
-      setUser({ uid: mockUid, email: "student@gmail.com", displayName: "Student" } as User);
-      setRole("student");
-      setStudentProfile(studentData);
+      const mockUser = { uid: mockUid, email: "student@gmail.com", displayName: "Student" } as User;
+      saveSession(mockUser, "student", studentData, null);
       await recordLoginInDb(mockUid, "student@gmail.com", "Student", "student", "google_mock", studentData);
     }
   };
@@ -267,6 +349,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const userCred = await signInWithEmailAndPassword(auth, email, pass);
         if (userCred.user) {
+          saveSession(userCred.user, "student", studentProfile, null);
           await recordLoginInDb(userCred.user.uid, email, displayName, "student", "email_signin");
         }
       } catch (error: any) {
@@ -281,7 +364,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 className: "CSE-A, 3rd Year",
                 role: "student",
               };
-              setStudentProfile(studentData);
+              saveSession(userCred.user, "student", studentData, null);
               await recordLoginInDb(userCred.user.uid, email, displayName, "student", "email_signup", studentData);
             }
           } catch (createErr: any) {
@@ -300,9 +383,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 className: "CSE-A, 3rd Year",
                 role: "student",
               };
-              setUser({ uid: mockUid, email, displayName } as User);
-              setRole("student");
-              setStudentProfile(studentData);
+              const mockUser = { uid: mockUid, email, displayName } as User;
+              saveSession(mockUser, "student", studentData, null);
               await recordLoginInDb(mockUid, email, displayName, "student", "email_signup_fallback", studentData);
               return;
             }
@@ -322,9 +404,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             className: "CSE-A, 3rd Year",
             role: "student",
           };
-          setUser({ uid: mockUid, email, displayName } as User);
-          setRole("student");
-          setStudentProfile(studentData);
+          const mockUser = { uid: mockUid, email, displayName } as User;
+          saveSession(mockUser, "student", studentData, null);
           await recordLoginInDb(mockUid, email, displayName, "student", "email_signin_fallback", studentData);
         } else {
           console.error("Email auth error:", error);
@@ -340,9 +421,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         className: "CSE-A, 3rd Year",
         role: "student",
       };
-      setUser({ uid: mockUid, email, displayName } as User);
-      setRole("student");
-      setStudentProfile(studentData);
+      const mockUser = { uid: mockUid, email, displayName } as User;
+      saveSession(mockUser, "student", studentData, null);
       await recordLoginInDb(mockUid, email, displayName, "student", "email_mock", studentData);
     }
   };
@@ -350,11 +430,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const updateStudentProfile = async (data: Omit<StudentProfile, "uid" | "role">) => {
     if (user) {
       const newProfile: StudentProfile = { ...data, uid: user.uid, role: "student" };
-      setStudentProfile(newProfile);
-      setRole("student");
+      saveSession(user, "student", newProfile, teacherProfile);
       if (db) {
         try {
-          await setDoc(doc(db, "users", user.uid), newProfile);
+          await setDoc(doc(db, "users", user.uid), newProfile, { merge: true });
         } catch (error) {
           console.error("Failed to save student profile to DB:", error);
         }
@@ -365,11 +444,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const updateTeacherProfile = async (name: string) => {
     if (user) {
       const newProfile: TeacherProfile = { uid: user.uid, name, role: "teacher" };
-      setTeacherProfile(newProfile);
-      setRole("teacher");
+      saveSession(user, "teacher", studentProfile, newProfile);
       if (db) {
         try {
-          await setDoc(doc(db, "users", user.uid), newProfile);
+          await setDoc(doc(db, "users", user.uid), newProfile, { merge: true });
         } catch (error) {
           console.error("Failed to save teacher profile to DB:", error);
         }
@@ -379,17 +457,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      auth.signOut();
-    } else {
-      setUser(null);
-      setRole(null);
-      setStudentProfile(null);
-      setTeacherProfile(null);
+      auth.signOut().catch(() => {});
     }
+    saveSession(null, null, null, null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, studentProfile, teacherProfile, loading, loginAsMockStudent, loginAsMockTeacher, loginAsMockOrganizer, loginAsMockAdmin, loginWithGoogle, loginWithEmail, updateStudentProfile, updateTeacherProfile, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      role,
+      studentProfile,
+      teacherProfile,
+      loading,
+      loginAsMockStudent,
+      loginAsMockTeacher,
+      loginAsMockOrganizer,
+      loginAsMockAdmin,
+      loginWithGoogle,
+      loginWithEmail,
+      updateStudentProfile,
+      updateTeacherProfile,
+      logout
+    }}>
       {children}
     </AuthContext.Provider>
   );
