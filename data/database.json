@@ -1,0 +1,489 @@
+{
+  "project": {
+    "projectId": "collage-event-a47a9",
+    "appName": "EVENTORA AI",
+    "version": "1.0.0",
+    "exportedAt": "2026-10-30T04:38:18.219Z"
+  },
+  "collections": {
+    "events": [
+      {
+        "id": "e1",
+        "title": "TechNova 2026",
+        "category": "Technical",
+        "type": "Individual",
+        "status": "upcoming",
+        "date": "2026-11-04",
+        "time": "09:00 AM",
+        "venue": "Main Auditorium",
+        "location": "Block A, Ground Floor",
+        "description": "The annual flagship technical festival featuring hackathons, coding challenges, and tech talks.",
+        "longDescription": "TechNova 2026 is the most anticipated technical festival of the year. Featuring a 24-hour hackathon, competitive programming rounds, paper presentations, and inspiring talks from industry leaders in AI, robotics, and cloud computing. This is your chance to showcase your technical prowess and win prizes worth ₹2 Lakhs.",
+        "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format",
+        "organizer": "Tech Club",
+        "organizerId": "org1",
+        "maxSeats": 500,
+        "registeredCount": 342,
+        "registrationDeadline": "2026-11-02",
+        "eligibility": "All students",
+        "tags": [
+          "hackathon",
+          "coding",
+          "AI",
+          "robotics"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": true,
+        "college": "Engineering Department"
+      },
+      {
+        "id": "e2",
+        "title": "Rhythmica Cultural Fest",
+        "category": "Cultural",
+        "type": "Group",
+        "status": "upcoming",
+        "date": "2026-11-11",
+        "time": "10:00 AM",
+        "venue": "Open Air Theatre",
+        "location": "Campus Ground",
+        "description": "A vibrant celebration of art, music, dance, and culture from across India.",
+        "longDescription": "Rhythmica is our college's biggest cultural extravaganza, bringing together talents from across the state. Enjoy classical and contemporary dance performances, music competitions, drama, fashion shows, and art exhibitions.",
+        "image": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&auto=format",
+        "organizer": "Cultural Committee",
+        "maxSeats": 1000,
+        "registeredCount": 687,
+        "registrationDeadline": "2026-11-09",
+        "eligibility": "All students",
+        "tags": [
+          "dance",
+          "music",
+          "drama",
+          "art"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": true,
+        "college": "Fine Arts Department"
+      },
+      {
+        "id": "e3",
+        "title": "AI & ML Workshop",
+        "category": "Workshop",
+        "type": "Individual",
+        "status": "upcoming",
+        "date": "2026-11-02",
+        "time": "11:00 AM",
+        "venue": "Computer Lab 3",
+        "location": "Block C, 2nd Floor",
+        "description": "Hands-on workshop on Machine Learning fundamentals with Python and TensorFlow.",
+        "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&auto=format",
+        "organizer": "AI Research Club",
+        "maxSeats": 60,
+        "registeredCount": 58,
+        "registrationDeadline": "2026-10-31",
+        "eligibility": "2nd year and above",
+        "tags": [
+          "AI",
+          "Python",
+          "ML",
+          "TensorFlow"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": false
+      },
+      {
+        "id": "e4",
+        "title": "National Level Seminar on Cybersecurity",
+        "category": "Seminar",
+        "type": "Individual",
+        "status": "upcoming",
+        "date": "2026-11-07",
+        "time": "09:30 AM",
+        "venue": "Seminar Hall",
+        "location": "Admin Block, 1st Floor",
+        "description": "Expert talks on ethical hacking, data privacy, and modern cybersecurity threats.",
+        "image": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format",
+        "organizer": "InfoSec Club",
+        "maxSeats": 200,
+        "registeredCount": 145,
+        "registrationDeadline": "2026-11-05",
+        "eligibility": "All students and faculty",
+        "tags": [
+          "cybersecurity",
+          "hacking",
+          "privacy"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": true,
+        "college": "IT Department"
+      },
+      {
+        "id": "e5",
+        "title": "Inter-College Football Tournament",
+        "category": "Sports",
+        "type": "Group",
+        "status": "upcoming",
+        "date": "2026-11-14",
+        "time": "08:00 AM",
+        "venue": "College Football Ground",
+        "location": "Sports Complex",
+        "description": "7-a-side football tournament with 16 teams competing for the championship trophy.",
+        "image": "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&auto=format",
+        "organizer": "Sports Committee",
+        "maxSeats": 112,
+        "registeredCount": 98,
+        "registrationDeadline": "2026-11-11",
+        "eligibility": "Teams of 7-10 players",
+        "tags": [
+          "football",
+          "sports",
+          "tournament"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": false
+      },
+      {
+        "id": "e6",
+        "title": "Campus Placement Drive — Infosys",
+        "category": "Placement",
+        "type": "Individual",
+        "status": "upcoming",
+        "date": "2026-11-06",
+        "time": "08:30 AM",
+        "venue": "Placement Hall",
+        "location": "Admin Block",
+        "description": "Infosys campus recruitment for final year students. Aptitude test, technical and HR rounds.",
+        "image": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format",
+        "organizer": "Placement Cell",
+        "maxSeats": 300,
+        "registeredCount": 267,
+        "registrationDeadline": "2026-11-04",
+        "eligibility": "Final year B.Tech / MCA",
+        "tags": [
+          "placement",
+          "Infosys",
+          "recruitment"
+        ],
+        "certificateAvailable": false,
+        "isFeatured": true
+      },
+      {
+        "id": "e16",
+        "title": "Kala Rang: Annual Campus Arts Carnival",
+        "category": "Arts",
+        "type": "Individual",
+        "status": "upcoming",
+        "date": "2026-11-10",
+        "time": "10:00 AM",
+        "venue": "Creative Arts Courtyard",
+        "location": "Block B & Open Grounds",
+        "description": "The grandest celebration of visual and performing arts on campus. Participate in single or group competitions with customized activity tracks.",
+        "image": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format",
+        "organizer": "Fine Arts & Cultural Council",
+        "maxSeats": 350,
+        "registeredCount": 162,
+        "registrationDeadline": "2026-11-08",
+        "eligibility": "All college students (Individual or Group)",
+        "tags": [
+          "arts",
+          "painting",
+          "dance",
+          "theatre",
+          "music"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": true
+      },
+      {
+        "id": "e17",
+        "title": "Campus Sports Olympiad 2026",
+        "category": "Sports",
+        "type": "Group",
+        "status": "upcoming",
+        "date": "2026-11-15",
+        "time": "07:30 AM",
+        "venue": "Main Stadium & Indoor Complex",
+        "location": "Campus Sports Arena",
+        "description": "Comprehensive multi-sport olympiad featuring track sprints, football, cricket, basketball, and racquet sports in both single and group formats.",
+        "image": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&auto=format",
+        "organizer": "Department of Physical Education",
+        "maxSeats": 450,
+        "registeredCount": 290,
+        "registrationDeadline": "2026-11-13",
+        "eligibility": "All undergraduate & postgraduate students",
+        "tags": [
+          "sports",
+          "olympiad",
+          "athletics",
+          "football",
+          "cricket"
+        ],
+        "certificateAvailable": true,
+        "isFeatured": true
+      }
+    ],
+    "activities": [
+      {
+        "id": "art-s1",
+        "name": "Solo Classical Dance (Bharatanatyam / Kathak)",
+        "category": "Arts",
+        "type": "Single",
+        "description": "Individual classical solo performance (10 mins)"
+      },
+      {
+        "id": "art-s2",
+        "name": "Live Oil & Acrylic Canvas Painting",
+        "category": "Arts",
+        "type": "Single",
+        "description": "Individual live canvas painting competition"
+      },
+      {
+        "id": "art-s3",
+        "name": "Pencil Sketching & Charcoal Portrait",
+        "category": "Arts",
+        "type": "Single",
+        "description": "Individual monochrome portrait & nature sketching"
+      },
+      {
+        "id": "art-s4",
+        "name": "Digital Concept Art & Illustration",
+        "category": "Arts",
+        "type": "Single",
+        "description": "Solo digital concept art using graphic tablet or iPad"
+      },
+      {
+        "id": "art-s5",
+        "name": "Classical & Semi-Classical Vocal Solo",
+        "category": "Arts",
+        "type": "Single",
+        "description": "Carnatic / Hindustani vocal solo performance"
+      },
+      {
+        "id": "art-s6",
+        "name": "Creative Monologue / Solo Theatre",
+        "category": "Arts",
+        "type": "Single",
+        "description": "Individual dramatic performance & monologue acting"
+      },
+      {
+        "id": "art-g1",
+        "name": "Group Folk & Traditional Dance",
+        "category": "Arts",
+        "type": "Group",
+        "minTeam": 6,
+        "maxTeam": 12,
+        "description": "Synchronized group traditional or tribal folk dance"
+      },
+      {
+        "id": "art-g2",
+        "name": "Street Play (Nukkad Natak) / Mime Show",
+        "category": "Arts",
+        "type": "Group",
+        "minTeam": 5,
+        "maxTeam": 10,
+        "description": "Social awareness street drama or silent mime performance"
+      },
+      {
+        "id": "art-g3",
+        "name": "College Band / Acoustic Fusion",
+        "category": "Arts",
+        "type": "Group",
+        "minTeam": 3,
+        "maxTeam": 8,
+        "description": "Live multi-instrument band performance & cover battle"
+      },
+      {
+        "id": "art-g4",
+        "name": "Mural Wall Art & Creative Graffiti",
+        "category": "Arts",
+        "type": "Group",
+        "minTeam": 2,
+        "maxTeam": 4,
+        "description": "Large format creative wall mural collaboration"
+      },
+      {
+        "id": "sprt-s1",
+        "name": "100m Sprint Dash (Men & Women)",
+        "category": "Sports",
+        "type": "Single",
+        "description": "High-speed track sprint dash event"
+      },
+      {
+        "id": "sprt-s2",
+        "name": "200m Track Race",
+        "category": "Sports",
+        "type": "Single",
+        "description": "Individual track race"
+      },
+      {
+        "id": "sprt-s3",
+        "name": "Badminton Singles Tournament",
+        "category": "Sports",
+        "type": "Single",
+        "description": "Single elimination badminton championship"
+      },
+      {
+        "id": "sprt-s4",
+        "name": "Table Tennis Singles Knockout",
+        "category": "Sports",
+        "type": "Single",
+        "description": "Fast-paced individual table tennis matches"
+      },
+      {
+        "id": "sprt-s5",
+        "name": "Chess Blitz Championship",
+        "category": "Sports",
+        "type": "Single",
+        "description": "FIDE-rules timed rapid chess tournament"
+      },
+      {
+        "id": "sprt-s6",
+        "name": "Athletics: Long Jump & Shot Put",
+        "category": "Sports",
+        "type": "Single",
+        "description": "Field athletics jump and throw competition"
+      },
+      {
+        "id": "sprt-g1",
+        "name": "Football 7-a-side Championship",
+        "category": "Sports",
+        "type": "Group",
+        "minTeam": 7,
+        "maxTeam": 10,
+        "description": "Inter-department 7-a-side football tournament"
+      },
+      {
+        "id": "sprt-g2",
+        "name": "Cricket T10 Trophy",
+        "category": "Sports",
+        "type": "Group",
+        "minTeam": 11,
+        "maxTeam": 15,
+        "description": "10-over competitive cricket tournament"
+      },
+      {
+        "id": "sprt-g3",
+        "name": "Basketball 3x3 / 5v5 Tournament",
+        "category": "Sports",
+        "type": "Group",
+        "minTeam": 3,
+        "maxTeam": 5,
+        "description": "Full court competitive basketball tournament"
+      },
+      {
+        "id": "sprt-g4",
+        "name": "Volleyball Championship",
+        "category": "Sports",
+        "type": "Group",
+        "minTeam": 6,
+        "maxTeam": 9,
+        "description": "Standard 6-player rotation volleyball matches"
+      },
+      {
+        "id": "sprt-g5",
+        "name": "4x100m Relay Sprint",
+        "category": "Sports",
+        "type": "Group",
+        "minTeam": 4,
+        "maxTeam": 4,
+        "description": "4-member relay track race"
+      },
+      {
+        "id": "sprt-g6",
+        "name": "Badminton Doubles / Mixed Doubles",
+        "category": "Sports",
+        "type": "Group",
+        "minTeam": 2,
+        "maxTeam": 2,
+        "description": "Two-player partner doubles tournament"
+      }
+    ],
+    "groups": [
+      {
+        "id": "g-arts-1",
+        "eventId": "e16",
+        "name": "Rhythm Troupe",
+        "members": [
+          "mock-student-123",
+          "student-2"
+        ]
+      },
+      {
+        "id": "g-arts-2",
+        "eventId": "e16",
+        "name": "Canvas Creators",
+        "members": [
+          "student-3",
+          "student-4"
+        ]
+      },
+      {
+        "id": "g-sports-1",
+        "eventId": "e17",
+        "name": "Titans FC",
+        "members": [
+          "mock-student-123",
+          "student-5"
+        ]
+      },
+      {
+        "id": "g-sports-2",
+        "eventId": "e17",
+        "name": "Red Strikers",
+        "members": [
+          "student-6",
+          "student-7"
+        ]
+      },
+      {
+        "id": "g-foot-1",
+        "eventId": "e5",
+        "name": "CS Strikers",
+        "members": [
+          "student-8",
+          "student-9"
+        ]
+      }
+    ],
+    "users": [
+      {
+        "uid": "mock-student-123",
+        "name": "Alex Johnson",
+        "email": "alex.johnson@campus.edu",
+        "registerNumber": "20CS042",
+        "className": "CSE-A, 3rd Year",
+        "role": "student"
+      },
+      {
+        "uid": "mock-teacher-456",
+        "name": "Prof. Sharma",
+        "email": "prof.sharma@campus.edu",
+        "role": "teacher"
+      },
+      {
+        "uid": "mock-organizer-789",
+        "name": "Tech Club Organizer",
+        "email": "tech.club@campus.edu",
+        "role": "organizer"
+      },
+      {
+        "uid": "mock-admin-999",
+        "name": "Campus Admin",
+        "email": "admin@campus.edu",
+        "role": "admin"
+      }
+    ],
+    "certificates": [
+      {
+        "id": "cert1",
+        "studentId": "mock-student-123",
+        "studentName": "Alex Johnson",
+        "eventId": "e13",
+        "eventTitle": "Debate Championship",
+        "eventDate": "2026-10-25",
+        "issuedAt": "2026-10-27",
+        "verificationCode": "EVNT-2026-CERT-A7K9",
+        "organizerName": "Debate Society"
+      }
+    ]
+  }
+}

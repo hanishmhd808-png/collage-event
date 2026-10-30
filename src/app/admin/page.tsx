@@ -6,9 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
-import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity, Database, RefreshCw, Server } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { initialEvents, DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES, initialGroups, mockCertificates } from "@/lib/mockData";
+import { useToast } from "@/context/ToastContext";
 
-const TABS = ["Overview", "Events", "Users", "Analytics", "Audit Log"];
+const TABS = ["Overview", "Events", "Users", "Analytics", "Database", "Audit Log"];
 
 const MOCK_USERS = [
   { name: "Alex Johnson", email: "alex@college.edu", role: "student", date: "2026-09-01", status: "active" },
@@ -40,6 +44,39 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [userRoleFilter, setUserRoleFilter] = useState("All");
   const [eventSearch, setEventSearch] = useState("");
+  const [syncingDb, setSyncingDb] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+  const { showToast } = useToast();
+
+  const handleSyncFirestore = async () => {
+    if (!db) {
+      showToast("Firebase database is not initialized", "error");
+      return;
+    }
+    setSyncingDb(true);
+    setSyncSuccess(false);
+    try {
+      for (const ev of initialEvents) {
+        await setDoc(doc(db, "events", ev.id), ev);
+      }
+      for (const act of [...DEFAULT_ARTS_ACTIVITIES, ...DEFAULT_SPORTS_ACTIVITIES]) {
+        await setDoc(doc(db, "activities", act.id), act);
+      }
+      for (const grp of initialGroups) {
+        await setDoc(doc(db, "groups", grp.id), grp);
+      }
+      for (const cert of mockCertificates) {
+        await setDoc(doc(db, "certificates", cert.id), cert);
+      }
+      setSyncSuccess(true);
+      showToast("Cloud Firestore database synced successfully!", "success");
+    } catch (err: any) {
+      console.error("Database sync error:", err);
+      showToast("Database sync: " + (err.message || "Failed to update Firestore"), "error");
+    } finally {
+      setSyncingDb(false);
+    }
+  };
 
   useEffect(() => { if (!loading && !user) router.push("/"); }, [user, loading, router]);
   if (loading || !user) return <div className="bg-[#0a0a0f] min-h-screen flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" /></div>;
@@ -211,6 +248,74 @@ export default function AdminPage() {
                       <p className="text-white/40 text-xs mb-2">{s.l}</p><p className="text-white font-bold">{s.v}</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Database Tab */}
+            {activeTab === "Database" && (
+              <div className="space-y-6">
+                <div className="glass-dark border border-white/8 rounded-3xl p-6 sm:p-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                        <Database className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-bold text-lg">Google Cloud Firestore</h3>
+                        <p className="text-white/40 text-sm">Project: <span className="font-mono text-blue-400">collage-event-a47a9</span></p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live & Connected
+                      </span>
+                      <button
+                        onClick={handleSyncFirestore}
+                        disabled={syncingDb}
+                        className="btn-primary px-5 py-2.5 text-sm flex items-center gap-2"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${syncingDb ? "animate-spin" : ""}`} />
+                        {syncingDb ? "Syncing..." : "Sync to Firestore"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {syncSuccess && (
+                    <div className="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3 text-emerald-300 text-sm">
+                      <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                      All campus events, arts/sports tracks, groups, and certificates are synced with Firestore!
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                    <div className="p-4 rounded-2xl glass border border-white/5">
+                      <p className="text-white/40 text-xs mb-1">Firestore Collections</p>
+                      <p className="text-white font-mono font-bold text-sm">events, activities, groups, users</p>
+                    </div>
+                    <div className="p-4 rounded-2xl glass border border-white/5">
+                      <p className="text-white/40 text-xs mb-1">Security Rules</p>
+                      <p className="text-white font-semibold flex items-center gap-1.5 text-sm">
+                        <Shield className="w-4 h-4 text-emerald-400" /> firestore.rules (Active)
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl glass border border-white/5">
+                      <p className="text-white/40 text-xs mb-1">Repository Export</p>
+                      <p className="text-blue-400 font-mono text-sm">data/database.json</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-dark border border-white/8 rounded-3xl p-6">
+                  <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                    <Server className="w-4 h-4 text-violet-400" /> CLI Database Tooling
+                  </h4>
+                  <div className="bg-[#050508] p-4 rounded-2xl border border-white/10 font-mono text-xs text-white/80 space-y-2">
+                    <p className="text-white/40"># Run automated Firestore database seeder from terminal:</p>
+                    <p className="text-green-400">npm run db:seed</p>
+                    <p className="text-white/40 mt-3"># Re-export current database schema to JSON:</p>
+                    <p className="text-green-400">npm run db:export</p>
+                  </div>
                 </div>
               </div>
             )}
