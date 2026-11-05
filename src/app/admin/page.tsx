@@ -6,14 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
-import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity, Database, RefreshCw, Server, Plus } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Users, Calendar, BarChart3, Shield, Activity, Database, RefreshCw, Server, Plus, Building2, CheckCircle2, Globe, Search, ExternalLink } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, collection, onSnapshot } from "firebase/firestore";
 import { initialEvents, DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES, initialGroups, mockCertificates } from "@/lib/mockData";
 import { useToast } from "@/context/ToastContext";
 import CreateEventModal from "@/components/CreateEventModal";
 
-const TABS = ["Overview", "Events", "Users", "Analytics", "Database", "Audit Log"];
+const TABS = ["Overview", "Events", "Colleges", "Users", "Analytics", "Database", "Audit Log"];
 
 const MOCK_USERS = [
   { name: "Alex Johnson", email: "alex@college.edu", role: "student", date: "2026-09-01", status: "active" },
@@ -41,10 +41,12 @@ const ROLE_COLORS: Record<string, string> = {
 export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { events, registrations } = useApp();
+  const { events, registrations, colleges, verifyCollege } = useApp();
   const [activeTab, setActiveTab] = useState("Overview");
   const [userRoleFilter, setUserRoleFilter] = useState("All");
   const [eventSearch, setEventSearch] = useState("");
+  const [collegeSearch, setCollegeSearch] = useState("");
+  const [collegeDistrictFilter, setCollegeDistrictFilter] = useState("All");
   const [syncingDb, setSyncingDb] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [createEventOpen, setCreateEventOpen] = useState(false);
@@ -117,10 +119,10 @@ export default function AdminPage() {
   const categoryStats = ["Technical","Cultural","Sports","Workshop","Seminar","Conference","Placement","Club"].map(cat => ({ cat, count: events.filter(e => e.category === cat).length })).sort((a,b)=>b.count-a.count);
 
   const kpis = [
-    { label: "Total Students", value: allUsersList.filter(u=>u.role==="student").length.toString(), color: "#0a84ff", icon: Users },
+    { label: "Colleges Enrolled", value: colleges.length.toString(), color: "#0a84ff", icon: Building2 },
     { label: "Active Events", value: events.filter(e=>e.status==="upcoming").length.toString(), color: "#bf5af2", icon: Calendar },
-    { label: "Total Registrations", value: registrations.length > 0 ? registrations.length.toString() : "4,821", color: "#30d158", icon: Activity },
-    { label: "Platform Health", value: "99.9%", color: "#ff9f0a", icon: Shield },
+    { label: "Inter-College Events", value: events.filter(e=>e.isInterCollege).length.toString(), color: "#30d158", icon: Globe },
+    { label: "Verified Ratio", value: `${Math.round((colleges.filter(c=>c.isVerified).length / Math.max(colleges.length, 1)) * 100)}%`, color: "#ff9f0a", icon: Shield },
   ];
 
   return (
@@ -247,6 +249,161 @@ export default function AdminPage() {
                       </tr>
                     ))}</tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* Colleges Tab */}
+            {activeTab === "Colleges" && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex flex-wrap gap-2">
+                    {["All", "Malappuram", "Calicut", "Palakkad"].map((dist) => (
+                      <button
+                        key={dist}
+                        onClick={() => setCollegeDistrictFilter(dist)}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                          collegeDistrictFilter === dist
+                            ? "bg-blue-600 text-white"
+                            : "glass border border-white/10 text-white/50 hover:text-white"
+                        }`}
+                      >
+                        {dist}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="text"
+                      placeholder="Search colleges or codes..."
+                      value={collegeSearch}
+                      onChange={(e) => setCollegeSearch(e.target.value)}
+                      className="w-full glass border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-xs outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="glass-dark border border-white/8 rounded-3xl overflow-hidden">
+                  <div className="p-4 sm:p-6 border-b border-white/8 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white font-bold text-base flex items-center gap-2">
+                        <Building2 className="w-5 h-5 text-blue-400" />
+                        Registered Institutions Directory
+                      </h3>
+                      <p className="text-white/40 text-xs mt-0.5">
+                        Manage verification status, explore campus event hubs, and review credentials.
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      {colleges.filter((c) => c.isVerified).length}/{colleges.length} Verified
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/8">
+                          {["Institution", "Code", "District", "Events", "Status", "Actions"].map((h) => (
+                            <th key={h} className="px-4 py-3 text-left text-white/40 text-xs font-semibold">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {colleges
+                          .filter((c) => {
+                            const matchesSearch =
+                              !collegeSearch ||
+                              c.name.toLowerCase().includes(collegeSearch.toLowerCase()) ||
+                              c.code.toLowerCase().includes(collegeSearch.toLowerCase());
+                            const matchesDistrict =
+                              collegeDistrictFilter === "All" || c.district === collegeDistrictFilter;
+                            return matchesSearch && matchesDistrict;
+                          })
+                          .map((c) => {
+                            const collegeEventCount = events.filter(
+                              (e) => e.collegeId === c.id || e.collegeCode === c.code
+                            ).length;
+                            return (
+                              <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-3">
+                                    {c.logo ? (
+                                      <img
+                                        src={c.logo}
+                                        alt={c.code}
+                                        className="w-8 h-8 rounded-lg object-contain bg-white/5 p-1 border border-white/10"
+                                        onError={(e) => {
+                                          (e.target as HTMLElement).style.display = "none";
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-xs">
+                                        {c.code.slice(0, 2)}
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="text-white font-semibold text-sm">{c.name}</p>
+                                      <p className="text-white/40 text-xs">{c.address || `${c.district}, Kerala`}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-white/5 text-white/80 border border-white/10 font-bold">
+                                    {c.code}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-white/60 text-xs">{c.district}</td>
+                                <td className="px-4 py-3 text-white font-semibold text-xs">
+                                  {collegeEventCount} active
+                                </td>
+                                <td className="px-4 py-3">
+                                  {c.isVerified ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      <CheckCircle2 className="w-3 h-3" /> Verified
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                      Pending Review
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={async () => {
+                                        await verifyCollege(c.id, !c.isVerified);
+                                        showToast(
+                                          `${c.name} is now ${!c.isVerified ? "Verified" : "Unverified"}`,
+                                          "success"
+                                        );
+                                      }}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                        c.isVerified
+                                          ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
+                                          : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                      }`}
+                                    >
+                                      {c.isVerified ? "Revoke" : "Verify"}
+                                    </button>
+                                    <Link
+                                      href={`/colleges/${c.id}`}
+                                      className="p-1.5 glass border border-white/10 rounded-lg text-white/50 hover:text-white"
+                                      title="View College Hub"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </Link>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

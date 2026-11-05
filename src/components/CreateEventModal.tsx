@@ -25,6 +25,8 @@ import {
   Layers,
   ChevronRight,
   Eye,
+  GraduationCap,
+  Globe,
 } from "lucide-react";
 
 const CATEGORIES: Category[] = [
@@ -41,7 +43,7 @@ const CATEGORIES: Category[] = [
 ];
 
 // Curated high-resolution image presets organized by category
-const CURATED_IMAGE_PRESETS: Record<Category, { title: string; url: string }[]> = {
+const CURATED_IMAGE_PRESETS: Partial<Record<Category, { title: string; url: string }[]>> & { Technical: { title: string; url: string }[] } = {
   Technical: [
     { title: "Hackathon & Coding", url: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format" },
     { title: "AI & Neural Tech", url: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&auto=format" },
@@ -144,14 +146,36 @@ interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (eventId: string, title: string) => void;
+  initialCollegeId?: string;
+  initialCollegeName?: string;
 }
 
-export default function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModalProps) {
-  const { addEvent } = useApp();
+export default function CreateEventModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialCollegeId,
+  initialCollegeName,
+}: CreateEventModalProps) {
+  const { addEvent, colleges } = useApp();
   const { user, studentProfile } = useAuth();
   const { showToast } = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // College & Scope
+  const [selectedCollegeId, setSelectedCollegeId] = useState<string>(
+    initialCollegeId || studentProfile?.collegeId || "col-kmct"
+  );
+  const [isInterCollege, setIsInterCollege] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (initialCollegeId) {
+      setSelectedCollegeId(initialCollegeId);
+    } else if (studentProfile?.collegeId) {
+      setSelectedCollegeId(studentProfile.collegeId);
+    }
+  }, [initialCollegeId, studentProfile?.collegeId, isOpen]);
 
   // Form Fields
   const [title, setTitle] = useState("");
@@ -287,10 +311,19 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess }: CreateE
           ? DEFAULT_SPORTS_ACTIVITIES
           : undefined;
 
+      const matchedCollege =
+        colleges.find((c) => c.id === selectedCollegeId) ||
+        colleges[0] || {
+          id: "col-kmct",
+          name: "KMCT College of Engineering",
+          code: "KMCT",
+          district: "Malappuram",
+        };
+
       const organizerName =
         studentProfile?.name ||
         user?.displayName ||
-        (user?.email ? user.email.split("@")[0] : "Campus Student Organizer");
+        (user?.email ? user.email.split("@")[0] : `${matchedCollege.code} Student Council`);
 
       const newEvent: CampusEvent = {
         id: `e${Date.now()}`,
@@ -300,23 +333,29 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess }: CreateE
         status: "upcoming",
         date,
         time: time || "10:00 AM",
-        venue: venue.trim() || "Campus Main Hall",
-        location: location.trim() || "University Campus",
+        venue: venue.trim() || `${matchedCollege.name} Auditorium`,
+        location: location.trim() || `${matchedCollege.district}, Kerala`,
+        collegeId: matchedCollege.id,
+        college: matchedCollege.name,
+        collegeCode: matchedCollege.code,
+        collegeLogo: matchedCollege.logo,
+        district: matchedCollege.district,
+        isInterCollege: isInterCollege,
         description:
           description.trim() ||
-          `Join us for ${title.trim()}, organized by ${organizerName}. Open to all college students.`,
+          `Join us for ${title.trim()} hosted at ${matchedCollege.name}. Open to all college students.`,
         longDescription:
           longDescription.trim() ||
-          `${title.trim()} is an official campus event under the ${category} domain. Participants can register individually or with teams to showcase their skills and earn verified certificates.`,
+          `${title.trim()} is an official event organized by ${matchedCollege.name} under the ${category} domain. Participants can register individually or with teams to showcase their skills and earn verified certificates.`,
         maxSeats: parseInt(maxSeats, 10) || 100,
         registeredCount: 0,
         registrationDeadline: registrationDeadline || date,
-        eligibility: eligibility.trim() || "All College Students",
+        eligibility: eligibility.trim() || (isInterCollege ? "Open to students from all colleges across Kerala" : `Exclusive to ${matchedCollege.name} students`),
         certificateAvailable,
         image: selectedImage || CURATED_IMAGE_PRESETS.Technical[0].url,
         tags: tags
           ? tags.split(",").map((t) => t.trim()).filter(Boolean)
-          : [category.toLowerCase(), type.toLowerCase(), "campus"],
+          : [category.toLowerCase(), type.toLowerCase(), matchedCollege.code.toLowerCase(), isInterCollege ? "inter-college" : "campus"],
         isFeatured: true,
         organizer: organizerName,
         organizerId: user?.uid || "campus_lead",
@@ -617,6 +656,48 @@ export default function CreateEventModal({ isOpen, onClose, onSuccess }: CreateE
 
               {/* ── SECTION: CORE DETAILS ── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Host College & Event Scope */}
+                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                  <div>
+                    <label className="text-white/70 text-xs mb-1.5 block font-semibold flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-blue-400" /> Host Institution / College *
+                    </label>
+                    <select
+                      value={selectedCollegeId}
+                      onChange={(e) => setSelectedCollegeId(e.target.value)}
+                      className="w-full glass border border-white/10 rounded-xl px-3.5 py-2.5 text-white text-xs outline-none focus:border-blue-500 bg-[#0e1022]"
+                    >
+                      {colleges.map((col) => (
+                        <option key={col.id} value={col.id} className="bg-[#0a0a0f] text-white">
+                          {col.name} ({col.code}) — {col.district}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-white/70 text-xs mb-1.5 block font-semibold flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-emerald-400" /> Event Scope
+                    </label>
+                    <div
+                      onClick={() => setIsInterCollege(!isInterCollege)}
+                      className="flex items-center justify-between p-2.5 rounded-xl border border-white/10 glass cursor-pointer hover:border-emerald-500/50 transition-all bg-white/[0.02]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-white">
+                          {isInterCollege ? "🌐 Inter-College (All Kerala)" : "🏫 Intra-Campus Only"}
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isInterCollege}
+                        onChange={(e) => setIsInterCollege(e.target.checked)}
+                        className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Event Title */}
                 <div className="sm:col-span-2">
                   <label className="text-white/60 text-xs mb-1.5 block font-semibold">

@@ -12,7 +12,7 @@ import ActivityCustomizerModal from "@/components/ActivityCustomizerModal";
 import {
   Calendar, Award, Heart, Bell, ArrowRight, Ticket, CheckCircle, Clock,
   Megaphone, BookOpen, Zap, Palette, Trophy, User, Users, Flame,
-  Edit3, X, Save
+  Edit3, X, Save, Building2
 } from "lucide-react";
 
 function timeAgo(iso: string) {
@@ -35,11 +35,13 @@ const NOTIF_ICONS: Record<string, React.ReactNode> = {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, studentProfile, updateStudentProfile, loading } = useAuth();
-  const { events, myRegistrations, notifications, certificates, favorites, unreadCount } = useApp();
+  const { events, colleges, myRegistrations, notifications, certificates, favorites, unreadCount } = useApp();
   const { showToast } = useToast();
   const [profileName, setProfileName] = useState("");
   const [profileReg, setProfileReg] = useState("");
   const [profileClass, setProfileClass] = useState("");
+  const [profileCollegeId, setProfileCollegeId] = useState("");
+  const [profileCollegeName, setProfileCollegeName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -51,10 +53,14 @@ export default function DashboardPage() {
       setProfileName(studentProfile.name || "");
       setProfileReg(studentProfile.registerNumber || "");
       setProfileClass(studentProfile.className || "");
+      setProfileCollegeId(studentProfile.collegeId || "col-kmct");
+      setProfileCollegeName(studentProfile.collegeName || "KMCT College of Engineering");
     } else if (user) {
       setProfileName(user.displayName || user.email?.split("@")[0] || "");
       setProfileReg("20CS" + Math.floor(100 + Math.random() * 900));
       setProfileClass("CSE-A, 3rd Year");
+      setProfileCollegeId("col-kmct");
+      setProfileCollegeName("KMCT College of Engineering");
     }
   }, [studentProfile, user]);
 
@@ -88,10 +94,14 @@ export default function DashboardPage() {
     try {
       const finalReg = profileReg.trim() || studentProfile?.registerNumber || "20CS" + Math.floor(100 + Math.random() * 900);
       const finalClass = profileClass.trim() || studentProfile?.className || "CSE-A, 3rd Year";
+      const finalColId = profileCollegeId || studentProfile?.collegeId || "col-kmct";
+      const finalColName = profileCollegeName || studentProfile?.collegeName || "KMCT College of Engineering";
       await updateStudentProfile({
         name: profileName.trim(),
         registerNumber: finalReg,
         className: finalClass,
+        collegeId: finalColId,
+        collegeName: finalColName,
       });
       setIsEditingProfile(false);
       showToast("Student name and profile updated successfully!", "success");
@@ -125,10 +135,22 @@ export default function DashboardPage() {
                   <span className="gradient-text">My Dashboard</span>
                 )}
               </h1>
-              <p className="text-white/40">
-                {studentProfile?.className && `${studentProfile.className} · `}
-                {studentProfile?.registerNumber || "Campus Student"}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold backdrop-blur-md">
+                  <Building2 className="w-3.5 h-3.5" />
+                  {studentProfile?.collegeName || "KMCT College of Engineering"}
+                </span>
+                {studentProfile?.className && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs font-medium">
+                    {studentProfile.className}
+                  </span>
+                )}
+                {studentProfile?.registerNumber && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-white/50 text-xs font-mono">
+                    {studentProfile.registerNumber}
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <button
@@ -187,7 +209,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <form onSubmit={handleProfileSave} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <form onSubmit={handleProfileSave} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-white/70 text-xs font-semibold mb-1.5 block">Full Name *</label>
                 <input
@@ -197,6 +219,26 @@ export default function DashboardPage() {
                   required
                   className="w-full glass border border-white/15 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/60 transition-colors"
                 />
+              </div>
+              <div>
+                <label className="text-white/70 text-xs font-semibold mb-1.5 block flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-400" /> College / Institution
+                </label>
+                <select
+                  value={profileCollegeId}
+                  onChange={e => {
+                    setProfileCollegeId(e.target.value);
+                    const c = colleges.find(item => item.id === e.target.value);
+                    if (c) setProfileCollegeName(c.name);
+                  }}
+                  className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/50 bg-[#0c0e1a]"
+                >
+                  {colleges.map(c => (
+                    <option key={c.id} value={c.id} className="bg-[#0a0a0f] text-white">
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-white/70 text-xs font-semibold mb-1.5 block">Register Number</label>
@@ -216,7 +258,7 @@ export default function DashboardPage() {
                   className="w-full glass border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 outline-none focus:border-blue-500/50"
                 />
               </div>
-              <div className="sm:col-span-3 flex items-center gap-3 pt-2">
+              <div className="sm:col-span-2 lg:col-span-4 flex items-center gap-3 pt-2">
                 <button
                   type="submit"
                   disabled={savingProfile}

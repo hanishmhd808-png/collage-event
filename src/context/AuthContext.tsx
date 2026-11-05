@@ -7,7 +7,7 @@ import { auth, db } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { StudentProfile, TeacherProfile } from "@/types";
 
-export type Role = "student" | "teacher" | "organizer" | "faculty" | "admin" | null;
+export type Role = "student" | "teacher" | "organizer" | "faculty" | "admin" | "college_admin" | null;
 
 interface AuthContextType {
   user: User | null;
@@ -15,12 +15,22 @@ interface AuthContextType {
   studentProfile: StudentProfile | null;
   teacherProfile: TeacherProfile | null;
   loading: boolean;
-  loginAsMockStudent: () => void;
+  loginAsMockStudent: (collegeId?: string) => void;
   loginAsMockTeacher: () => void;
   loginAsMockOrganizer: () => void;
   loginAsMockAdmin: () => void;
+  loginAsCollegeAdmin: (collegeId?: string) => void;
   loginWithGoogle: () => Promise<void>;
-  loginWithEmail: (email: string, pass: string, name?: string, registerNumber?: string, className?: string) => Promise<void>;
+  loginWithEmail: (
+    email: string,
+    pass: string,
+    name?: string,
+    registerNumber?: string,
+    className?: string,
+    collegeId?: string,
+    collegeName?: string,
+    course?: string
+  ) => Promise<void>;
   updateStudentProfile: (profile: Partial<Omit<StudentProfile, "uid" | "role">> & { name: string }) => Promise<void>;
   updateTeacherProfile: (name: string) => Promise<void>;
   logout: () => void;
@@ -38,6 +48,7 @@ const AuthContext = createContext<AuthContextType>({
   loginAsMockTeacher: () => {},
   loginAsMockOrganizer: () => {},
   loginAsMockAdmin: () => {},
+  loginAsCollegeAdmin: () => {},
   loginWithGoogle: async () => {},
   loginWithEmail: async () => {},
   updateStudentProfile: async () => {},
@@ -260,17 +271,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const loginAsMockStudent = () => {
+  const loginAsMockStudent = (collegeId: string = "col-kmct") => {
+    const collegeMap: Record<string, { name: string; code: string }> = {
+      "col-kmct": { name: "KMCT College of Engineering", code: "KMCT" },
+      "col-mes": { name: "MES Mampad College (Autonomous)", code: "MES" },
+      "col-farook": { name: "Farook College (Autonomous)", code: "FAROOK" },
+      "col-psmo": { name: "PSMO College Tirurangadi", code: "PSMO" },
+      "col-emea": { name: "EMEA College of Arts and Science", code: "EMEA" },
+      "col-unity": { name: "Unity Women's College Manjeri", code: "UNITY" },
+      "col-majlis": { name: "Majlis Arts & Science College", code: "MAJLIS" },
+    };
+    const col = collegeMap[collegeId] || collegeMap["col-kmct"];
     const studentData: StudentProfile = {
       uid: "mock-student-123",
       name: "Alex Johnson",
       registerNumber: "20CS042",
       className: "CSE-A, 3rd Year",
+      collegeId,
+      collegeName: col.name,
+      course: "B.Tech Computer Science & Engineering",
+      department: "Computer Science & Engineering",
+      semester: "S6",
+      district: "Malappuram",
       role: "student",
     };
     const mockUser = { uid: "mock-student-123", email: "alex.johnson@campus.edu", displayName: "Alex Johnson" } as User;
     saveSession(mockUser, "student", studentData, null);
     recordLoginInDb("mock-student-123", "alex.johnson@campus.edu", "Alex Johnson", "student", "mock_student", studentData);
+  };
+
+  const loginAsCollegeAdmin = (collegeId: string = "col-kmct") => {
+    const collegeMap: Record<string, string> = {
+      "col-kmct": "KMCT College of Engineering",
+      "col-mes": "MES Mampad College (Autonomous)",
+      "col-farook": "Farook College (Autonomous)",
+      "col-psmo": "PSMO College Tirurangadi",
+      "col-emea": "EMEA College of Arts and Science",
+      "col-unity": "Unity Women's College Manjeri",
+      "col-majlis": "Majlis Arts & Science College",
+    };
+    const colName = collegeMap[collegeId] || "KMCT College of Engineering";
+    const mockUser = {
+      uid: `col-admin-${collegeId}`,
+      email: `admin@${collegeId.replace("col-", "")}.edu.in`,
+      displayName: `${colName} Representative`,
+    } as User;
+    saveSession(mockUser, "college_admin", null, null);
+    recordLoginInDb(mockUser.uid, mockUser.email || "", mockUser.displayName || "", "college_admin", "mock_college_admin");
   };
 
   const loginAsMockTeacher = () => {
@@ -351,11 +398,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     pass: string,
     name?: string,
     registerNumber?: string,
-    className?: string
+    className?: string,
+    collegeId?: string,
+    collegeName?: string,
+    course?: string
   ) => {
     const displayName = name || email.split("@")[0] || "Student";
     const studentReg = registerNumber?.trim() || "20CS" + Math.floor(100 + Math.random() * 900);
     const studentClass = className?.trim() || "CSE-A, 3rd Year";
+    const effectiveCollegeId = collegeId || "col-kmct";
+    const effectiveCollegeName = collegeName || "KMCT College of Engineering";
+    const effectiveCourse = course || "B.Tech Computer Science & Engineering";
+
+    const makeStudentData = (uid: string): StudentProfile => ({
+      uid,
+      name: displayName,
+      registerNumber: studentReg,
+      className: studentClass,
+      collegeId: effectiveCollegeId,
+      collegeName: effectiveCollegeName,
+      course: effectiveCourse,
+      district: "Malappuram",
+      role: "student",
+    });
 
     if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
       try {
@@ -369,13 +434,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             const userCred = await createUserWithEmailAndPassword(auth, email, pass);
             if (userCred.user) {
-              const studentData: StudentProfile = {
-                uid: userCred.user.uid,
-                name: displayName,
-                registerNumber: studentReg,
-                className: studentClass,
-                role: "student",
-              };
+              const studentData = makeStudentData(userCred.user.uid);
               saveSession(userCred.user, "student", studentData, null);
               await recordLoginInDb(userCred.user.uid, email, displayName, "student", "email_signup", studentData);
             }
@@ -388,13 +447,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             ) {
               console.warn("Firebase Email provider not enabled in console. Falling back to local session with DB sync.");
               const mockUid = "email-" + Date.now();
-              const studentData: StudentProfile = {
-                uid: mockUid,
-                name: displayName,
-                registerNumber: studentReg,
-                className: studentClass,
-                role: "student",
-              };
+              const studentData = makeStudentData(mockUid);
               const mockUser = { uid: mockUid, email, displayName } as User;
               saveSession(mockUser, "student", studentData, null);
               await recordLoginInDb(mockUid, email, displayName, "student", "email_signup_fallback", studentData);
@@ -409,13 +462,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         ) {
           console.warn("Firebase Email provider not configured. Falling back to local session with DB sync.");
           const mockUid = "email-" + Date.now();
-          const studentData: StudentProfile = {
-            uid: mockUid,
-            name: displayName,
-            registerNumber: studentReg,
-            className: studentClass,
-            role: "student",
-          };
+          const studentData = makeStudentData(mockUid);
           const mockUser = { uid: mockUid, email, displayName } as User;
           saveSession(mockUser, "student", studentData, null);
           await recordLoginInDb(mockUid, email, displayName, "student", "email_signin_fallback", studentData);
@@ -426,13 +473,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } else {
       const mockUid = "email-mock-" + Date.now();
-      const studentData: StudentProfile = {
-        uid: mockUid,
-        name: displayName,
-        registerNumber: studentReg,
-        className: studentClass,
-        role: "student",
-      };
+      const studentData = makeStudentData(mockUid);
       const mockUser = { uid: mockUid, email, displayName } as User;
       saveSession(mockUser, "student", studentData, null);
       await recordLoginInDb(mockUid, email, displayName, "student", "email_mock", studentData);
@@ -456,11 +497,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const newProfile: StudentProfile = {
         ...existingProfile,
+        ...data,
         uid: activeUid,
         role: "student",
         name: finalName,
         registerNumber: finalReg,
         className: finalClass,
+        collegeId: data.collegeId || existingProfile.collegeId || "col-kmct",
+        collegeName: data.collegeName || existingProfile.collegeName || "KMCT College of Engineering",
+        course: data.course !== undefined ? data.course : existingProfile.course,
+        department: data.department !== undefined ? data.department : existingProfile.department,
+        semester: data.semester !== undefined ? data.semester : existingProfile.semester,
+        district: data.district || existingProfile.district || "Malappuram",
       };
 
       const updatedUser = user
@@ -529,6 +577,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       loginAsMockTeacher,
       loginAsMockOrganizer,
       loginAsMockAdmin,
+      loginAsCollegeAdmin,
       loginWithGoogle,
       loginWithEmail,
       updateStudentProfile,

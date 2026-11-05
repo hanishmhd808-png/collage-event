@@ -8,11 +8,39 @@ export type Category =
   | "Placement"
   | "Club"
   | "Arts"
-  | "Festivals";
+  | "Festivals"
+  | "Arts & Cultural"
+  | "Technology"
+  | "Technical Fest"
+  | "Workshops"
+  | "Seminars"
+  | "Conferences"
+  | "Competitions"
+  | "College Festivals";
 
 export type EventStatus = "upcoming" | "ongoing" | "completed" | "cancelled" | "draft";
 export type EventType = "Individual" | "Group";
-export type Role = "student" | "organizer" | "faculty" | "admin" | "teacher";
+export type Role = "student" | "organizer" | "faculty" | "admin" | "teacher" | "college_admin";
+
+export interface College {
+  id: string;
+  name: string;
+  code: string;
+  district: string;
+  state: string;
+  address: string;
+  logo?: string;
+  banner?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  isVerified: boolean;
+  establishedYear?: number;
+  eventCount?: number;
+  studentCount?: number;
+  description?: string;
+  featured?: boolean;
+}
 
 export interface Speaker {
   name: string;
@@ -65,6 +93,11 @@ export interface CampusEvent {
   isFeatured?: boolean;
   price?: number;
   college?: string;
+  collegeId?: string;
+  collegeCode?: string;
+  collegeLogo?: string;
+  isInterCollege?: boolean;
+  district?: string;
 }
 
 // Legacy alias
@@ -80,22 +113,32 @@ export interface StudentProfile {
   avatar?: string;
   department?: string;
   year?: string;
+  course?: string;
+  semester?: string;
+  collegeId?: string;
+  collegeName?: string;
+  district?: string;
+  studentIdCard?: string;
   interests?: Category[];
 }
 
 export interface TeacherProfile {
   uid: string;
   name: string;
-  role: "teacher";
+  role: "teacher" | "faculty";
   department?: string;
+  collegeId?: string;
+  collegeName?: string;
 }
 
 export interface OrganizerProfile {
   uid: string;
   name: string;
-  role: "organizer";
+  role: "organizer" | "college_admin";
   club?: string;
   department?: string;
+  collegeId?: string;
+  collegeName?: string;
 }
 
 export interface AdminProfile {
@@ -111,6 +154,8 @@ export interface Registration {
   studentName: string;
   registerNumber?: string;
   className?: string;
+  collegeId?: string;
+  collegeName?: string;
   groupId?: string;
   groupName?: string;
   activityName?: string;
@@ -133,10 +178,14 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: "registration" | "reminder" | "cancellation" | "certificate" | "announcement" | "update";
+  type: "registration" | "reminder" | "cancellation" | "certificate" | "announcement" | "update" | "inter_college" | "college_announcement";
   read: boolean;
   createdAt: string;
   eventId?: string;
+  collegeId?: string;
+  collegeName?: string;
+  priority?: "normal" | "high";
+  actionUrl?: string;
 }
 
 export interface Certificate {
@@ -149,6 +198,7 @@ export interface Certificate {
   issuedAt: string;
   verificationCode: string;
   organizerName?: string;
+  collegeName?: string;
 }
 
 export interface AITool {

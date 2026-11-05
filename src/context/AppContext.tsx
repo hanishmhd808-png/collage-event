@@ -1,11 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { CampusEvent, Registration, Group, Notification, Certificate, ActivityOption } from "@/types";
+import { CampusEvent, Registration, Group, Notification, Certificate, ActivityOption, College } from "@/types";
 import { useAuth } from "./AuthContext";
 import { db } from "../lib/firebase";
 import { collection, doc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import {
+  initialColleges,
   initialEvents,
   initialRegistrations,
   initialGroups,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/mockData";
 
 const STORAGE_KEYS = {
+  COLLEGES: "eventora_colleges",
   EVENTS: "eventora_events",
   REGISTRATIONS: "eventora_registrations",
   GROUPS: "eventora_groups",
@@ -23,6 +25,7 @@ const STORAGE_KEYS = {
 };
 
 interface AppContextType {
+  colleges: College[];
   events: CampusEvent[];
   registrations: Registration[];
   groups: Group[];
@@ -31,13 +34,17 @@ interface AppContextType {
   favorites: string[];
   addEvent: (e: CampusEvent) => Promise<void>;
   updateEvent: (id: string, updatedEvent: Partial<CampusEvent>) => Promise<void>;
+  addCollege: (c: College) => Promise<void>;
+  updateCollege: (id: string, updated: Partial<College>) => Promise<void>;
+  verifyCollege: (id: string, isVerified: boolean) => Promise<void>;
+  sendAnnouncement: (title: string, message: string, collegeId?: string, isInterCollege?: boolean) => Promise<void>;
   registerForEvent: (
     eventId: string,
     groupId?: string,
     groupName?: string,
     activityName?: string,
     participationType?: "Single" | "Group",
-    customDetails?: { studentName?: string; registerNumber?: string; className?: string }
+    customDetails?: { studentName?: string; registerNumber?: string; className?: string; collegeName?: string; collegeId?: string }
   ) => Promise<{ success: boolean; message: string }>;
   addCustomActivity: (eventId: string, activity: ActivityOption) => void;
   markNotificationRead: (id: string) => void;
@@ -53,6 +60,19 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, studentProfile } = useAuth();
 
   // 1. Synchronously restore state from localStorage on page refresh
+  const [colleges, setColleges] = useState<College[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.COLLEGES);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return initialColleges;
+  });
+
   const [events, setEvents] = useState<CampusEvent[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -135,6 +155,20 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!db) return;
 
+    const unsubColleges = onSnapshot(
+      collection(db, "colleges"),
+      (snapshot) => {
+        if (snapshot.docs.length > 0) {
+          const dbCols = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as College));
+          setColleges(dbCols);
+          if (typeof window !== "undefined") {
+            try { localStorage.setItem(STORAGE_KEYS.COLLEGES, JSON.stringify(dbCols)); } catch {}
+          }
+        }
+      },
+      () => {}
+    );
+
     const unsubEvents = onSnapshot(
       collection(db, "events"),
       (snapshot) => {
@@ -193,6 +227,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     return () => {
+      unsubColleges();
       unsubEvents();
       unsubRegs();
       unsubGroups();
@@ -229,6 +264,55 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
     if (db) {
       try { await updateDoc(doc(db, "events", id), updatedEvent as Record<string, unknown>); } catch {}
+    }
+  };
+
+  const addCollege = async (c: College) => {
+    const updated = [c, ...colleges];
+    setColleges(updated);
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem(STORAGE_KEYS.COLLEGES, JSON.stringify(updated)); } catch {}
+    }
+    if (db) {
+      try { await setDoc(doc(db, "colleges", c.id), c); } catch {}
+    }
+  };
+
+  const updateCollege = async (id: string, updated: Partial<College>) => {
+    const newColleges = colleges.map(col => col.id === id ? { ...col, ...updated } : col);
+    setColleges(newColleges);
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem(STORAGE_KEYS.COLLEGES, JSON.stringify(newColleges)); } catch {}
+    }
+    if (db) {
+      try { await updateDoc(doc(db, "colleges", id), updated as Record<string, unknown>); } catch {}
+    }
+  };
+
+  const verifyCollege = async (id: string, isVerified: boolean) => {
+    await updateCollege(id, { isVerified });
+  };
+
+  const sendAnnouncement = async (title: string, message: string, collegeId?: string, isInterCollege: boolean = false) => {
+    const targetCollege = colleges.find(c => c.id === collegeId);
+    const notif: Notification = {
+      id: `n${Date.now()}`,
+      userId: user?.uid || "all",
+      title,
+      message,
+      type: isInterCollege ? "inter_college" : collegeId ? "college_announcement" : "announcement",
+      read: false,
+      createdAt: new Date().toISOString(),
+      collegeId,
+      collegeName: targetCollege?.name,
+    };
+    const next = [notif, ...notifications];
+    setNotifications(next);
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(next)); } catch {}
+    }
+    if (db) {
+      try { await setDoc(doc(db, "notifications", notif.id), notif); } catch {}
     }
   };
 
@@ -318,7 +402,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     groupName?: string,
     activityName?: string,
     participationType?: "Single" | "Group",
-    customDetails?: { studentName?: string; registerNumber?: string; className?: string }
+    customDetails?: { studentName?: string; registerNumber?: string; className?: string; collegeName?: string; collegeId?: string }
   ) => {
     if (!user) return { success: false, message: "Please sign in to register for this event." };
 
@@ -403,6 +487,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       studentName: activeProfile.name,
       registerNumber: activeProfile.registerNumber,
       className: activeProfile.className,
+      collegeId: customDetails?.collegeId || studentProfile?.collegeId,
+      collegeName: customDetails?.collegeName || studentProfile?.collegeName || "KMCT College of Engineering",
       groupId: finalGroupId,
       groupName: finalGroupName,
       activityName,
@@ -499,8 +585,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AppContext.Provider value={{
-      events, registrations, groups, notifications, certificates, favorites,
-      addEvent, updateEvent, registerForEvent, addCustomActivity,
+      colleges, events, registrations, groups, notifications, certificates, favorites,
+      addEvent, updateEvent, addCollege, updateCollege, verifyCollege, sendAnnouncement,
+      registerForEvent, addCustomActivity,
       markNotificationRead, markAllRead, toggleFavorite,
       myRegistrations, unreadCount,
     }}>

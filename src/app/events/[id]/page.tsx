@@ -10,7 +10,7 @@ import { useToast } from "@/context/ToastContext";
 import {
   Calendar, MapPin, Users, Clock, Award, ChevronLeft, Share2, Heart,
   CheckCircle, AlertCircle, Ticket, User, Palette, Trophy, Sparkles,
-  Edit3, Check
+  Edit3, Check, Building2, Globe, CheckCircle2
 } from "lucide-react";
 import { DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES } from "@/lib/mockData";
 
@@ -84,7 +84,7 @@ function QRTicket({
 
 export default function EventDetailPage() {
   const { id } = useParams() as { id: string };
-  const { events, groups, registerForEvent, myRegistrations, favorites, toggleFavorite, addCustomActivity } = useApp();
+  const { events, colleges, groups, registerForEvent, myRegistrations, favorites, toggleFavorite, addCustomActivity } = useApp();
   const { user, studentProfile, loginAsMockStudent, updateStudentProfile } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
@@ -95,20 +95,29 @@ export default function EventDetailPage() {
   const [editedStudentName, setEditedStudentName] = useState("");
   const [editedRegisterNumber, setEditedRegisterNumber] = useState("");
   const [editedClassName, setEditedClassName] = useState("");
+  const [editedCollegeId, setEditedCollegeId] = useState("");
+  const [editedCollegeName, setEditedCollegeName] = useState("");
 
   useEffect(() => {
     if (studentProfile) {
       setEditedStudentName(studentProfile.name || "");
       setEditedRegisterNumber(studentProfile.registerNumber || "");
       setEditedClassName(studentProfile.className || "");
+      setEditedCollegeId(studentProfile.collegeId || "col-kmct");
+      setEditedCollegeName(studentProfile.collegeName || "KMCT College of Engineering");
     } else if (user) {
       setEditedStudentName(user.displayName || user.email?.split("@")[0] || "");
       setEditedRegisterNumber("20CS101");
       setEditedClassName("CSE-A, 3rd Year");
+      setEditedCollegeId("col-kmct");
+      setEditedCollegeName("KMCT College of Engineering");
     }
   }, [studentProfile, user]);
 
   const event = events.find(e => e.id === id);
+  const organizingCollege = colleges.find(
+    (c) => c.id === event?.collegeId || c.code === event?.collegeCode || c.name === event?.college
+  );
 
   // Participation & Activity Customization State
   const standardActivities = event?.category === "Arts"
@@ -194,17 +203,23 @@ export default function EventDetailPage() {
     const finalName = editedStudentName.trim() || studentProfile?.name || user?.displayName || "Alex Johnson";
     const finalReg = editedRegisterNumber.trim() || studentProfile?.registerNumber || "20CS101";
     const finalClass = editedClassName.trim() || studentProfile?.className || "CSE-A, 3rd Year";
+    const finalCollegeId = editedCollegeId || studentProfile?.collegeId || "col-kmct";
+    const finalCollegeName = editedCollegeName || studentProfile?.collegeName || "KMCT College of Engineering";
 
     if (
       studentProfile &&
       (finalName !== studentProfile.name ||
         finalReg !== studentProfile.registerNumber ||
-        finalClass !== studentProfile.className)
+        finalClass !== studentProfile.className ||
+        finalCollegeId !== studentProfile.collegeId ||
+        finalCollegeName !== studentProfile.collegeName)
     ) {
       await updateStudentProfile({
         name: finalName,
         registerNumber: finalReg,
         className: finalClass,
+        collegeId: finalCollegeId,
+        collegeName: finalCollegeName,
       });
     }
 
@@ -216,7 +231,13 @@ export default function EventDetailPage() {
       participationType === "Group" && groupMode === "create" ? effectiveGroupName : undefined,
       activityToUse || undefined,
       participationType,
-      { studentName: finalName, registerNumber: finalReg, className: finalClass }
+      {
+        studentName: finalName,
+        registerNumber: finalReg,
+        className: finalClass,
+        collegeId: finalCollegeId,
+        collegeName: finalCollegeName,
+      }
     );
 
     setRegistering(false);
@@ -245,9 +266,35 @@ export default function EventDetailPage() {
             </Link>
             <div className="flex items-end gap-4">
               <div className="flex-1">
-                <div className="flex gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
                   <span className={`${CATEGORY_BADGE[event.category] || "badge-club"} px-3 py-1 rounded-full text-xs font-semibold`}>{event.category}</span>
                   <span className={`status-${event.status} px-3 py-1 rounded-full text-xs font-semibold capitalize`}>{event.status}</span>
+                  {event.isInterCollege ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-xs font-bold backdrop-blur-md">
+                      <Globe className="w-3 h-3" /> Inter-College
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white/70 border border-white/10 text-xs font-medium backdrop-blur-md">
+                      Intra-Campus
+                    </span>
+                  )}
+                  {organizingCollege ? (
+                    <Link
+                      href={`/colleges/${organizingCollege.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/90 hover:text-white text-xs font-medium backdrop-blur-md transition-all"
+                    >
+                      <Building2 className="w-3 h-3 text-blue-400" />
+                      <span>{organizingCollege.code} • {organizingCollege.name}</span>
+                      {organizingCollege.isVerified && (
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      )}
+                    </Link>
+                  ) : event.college ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white/80 text-xs font-medium backdrop-blur-md">
+                      <Building2 className="w-3 h-3 text-blue-400" />
+                      {event.college}
+                    </span>
+                  ) : null}
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-black text-white">{event.title}</h1>
               </div>
@@ -286,6 +333,39 @@ export default function EventDetailPage() {
                       <h2 className="text-white font-bold text-xl mb-4">About This Event</h2>
                       <p className="text-white/60 leading-relaxed">{event.longDescription || event.description}</p>
                     </div>
+
+                    {/* Inter-College or Campus-Exclusive Scope Banner */}
+                    {event.isInterCollege ? (
+                      <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-500/10 via-violet-500/10 to-transparent border border-blue-500/30 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-400">
+                          <Globe className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-white font-bold text-sm">Inter-College Event</h3>
+                            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold">Open to All Colleges</span>
+                          </div>
+                          <p className="text-white/60 text-xs mt-1 leading-relaxed">
+                            Students from across Malappuram and Kerala institutions can participate, compete, and receive verified cross-college certificates.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-5 rounded-3xl bg-white/[0.02] border border-white/10 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center flex-shrink-0 text-amber-400">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-white font-bold text-sm">Campus-Exclusive Event</h3>
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">Intra-Campus</span>
+                          </div>
+                          <p className="text-white/60 text-xs mt-1 leading-relaxed">
+                            Organized exclusively for enrolled students and faculty members of {organizingCollege?.name || event.college || "the host institution"}.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {[
                         { icon: Calendar, color: "text-blue-400", label: "Date", val: formatDate(event.date) },
@@ -601,6 +681,26 @@ export default function EventDetailPage() {
                                   className="w-full glass border border-blue-500/50 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-blue-400"
                                 />
                               </div>
+                              <div>
+                                <label className="text-white/60 text-xs mb-1 block flex items-center gap-1">
+                                  <Building2 className="w-3.5 h-3.5 text-blue-400" /> College / Institution *
+                                </label>
+                                <select
+                                  value={editedCollegeId}
+                                  onChange={e => {
+                                    setEditedCollegeId(e.target.value);
+                                    const c = colleges.find(item => item.id === e.target.value);
+                                    if (c) setEditedCollegeName(c.name);
+                                  }}
+                                  className="w-full glass border border-blue-500/50 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-blue-400 bg-[#0c0e1a]"
+                                >
+                                  {colleges.map(c => (
+                                    <option key={c.id} value={c.id} className="bg-[#0a0a0f] text-white">
+                                      {c.name} ({c.code}) — {c.district}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
                                   <label className="text-white/60 text-xs mb-1 block">Register No. *</label>
@@ -634,10 +734,14 @@ export default function EventDetailPage() {
                                     try {
                                       const finalReg = editedRegisterNumber.trim() || studentProfile?.registerNumber || "20CS101";
                                       const finalClass = editedClassName.trim() || studentProfile?.className || "CSE-A, 3rd Year";
+                                      const finalColId = editedCollegeId || studentProfile?.collegeId || "col-kmct";
+                                      const finalColName = editedCollegeName || studentProfile?.collegeName || "KMCT College of Engineering";
                                       await updateStudentProfile({
                                         name: editedStudentName.trim(),
                                         registerNumber: finalReg,
                                         className: finalClass,
+                                        collegeId: finalColId,
+                                        collegeName: finalColName,
                                       });
                                       setIsEditingStudentDetails(false);
                                       showToast("Student credentials saved!", "success");
@@ -657,6 +761,8 @@ export default function EventDetailPage() {
                                       setEditedStudentName(studentProfile.name || "");
                                       setEditedRegisterNumber(studentProfile.registerNumber || "");
                                       setEditedClassName(studentProfile.className || "");
+                                      setEditedCollegeId(studentProfile.collegeId || "col-kmct");
+                                      setEditedCollegeName(studentProfile.collegeName || "KMCT College of Engineering");
                                     }
                                   }}
                                   className="px-4 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white text-xs font-semibold"
@@ -671,6 +777,16 @@ export default function EventDetailPage() {
                                 <label className="text-white/40 text-[11px] mb-1 block">Student Name</label>
                                 <input
                                   value={editedStudentName || studentProfile?.name || user?.displayName || "Alex Johnson"}
+                                  readOnly
+                                  className="w-full glass border border-white/10 rounded-xl px-4 py-2 text-white text-sm opacity-80"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-white/40 text-[11px] mb-1 block flex items-center gap-1">
+                                  <Building2 className="w-3 h-3 text-blue-400" /> College / Institution
+                                </label>
+                                <input
+                                  value={editedCollegeName || studentProfile?.collegeName || "KMCT College of Engineering"}
                                   readOnly
                                   className="w-full glass border border-white/10 rounded-xl px-4 py-2 text-white text-sm opacity-80"
                                 />
@@ -694,7 +810,7 @@ export default function EventDetailPage() {
                                 </div>
                               </div>
                               <p className="text-[11px] text-white/40 pt-1">
-                                Click <strong className="text-blue-400">Edit Credentials</strong> to change your name, register number, or class before registering.
+                                Click <strong className="text-blue-400">Edit Credentials</strong> to change your name, college, register number, or class before registering.
                               </p>
                             </div>
                           )}

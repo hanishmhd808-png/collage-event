@@ -70,10 +70,15 @@ export default function EventCard({ event, index = 0, compact = false }: EventCa
           <div className="absolute inset-0 bg-gradient-to-t from-[#0d0f1d] via-transparent to-transparent" />
 
           {/* Category & Status Badges */}
-          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 max-w-[80%]">
             <span className={`${CATEGORY_BADGE[event.category] || "badge-club"} px-2.5 py-1 rounded-full text-xs font-semibold shadow-md`}>
               {event.category}
             </span>
+            {event.isInterCollege && (
+              <span className="bg-sky-500/25 border border-sky-400/40 text-sky-200 backdrop-blur-md px-2 py-0.5 rounded-full text-[11px] font-semibold shadow-md flex items-center gap-1">
+                🌐 Inter-College
+              </span>
+            )}
             {event.isFeatured && (
               <span className="bg-amber-400/20 border border-amber-400/40 text-amber-300 px-2.5 py-1 rounded-full text-xs font-semibold shadow-md">
                 ⭐ Featured
@@ -106,10 +111,23 @@ export default function EventCard({ event, index = 0, compact = false }: EventCa
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           {compact && (
-            <div className="flex gap-2 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               <span className={`${CATEGORY_BADGE[event.category] || "badge-club"} px-2.5 py-1 rounded-full text-xs font-semibold`}>
                 {event.category}
               </span>
+              {event.isInterCollege && (
+                <span className="bg-sky-500/20 text-sky-300 text-xs px-2 py-0.5 rounded-full">
+                  🌐 Inter-College
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* College Tag */}
+          {(event.college || event.collegeCode) && (
+            <div className="flex items-center gap-1.5 text-xs text-blue-300/80 font-medium mb-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              <span className="truncate">{event.collegeCode ? `${event.collegeCode} • ` : ""}{event.college}</span>
             </div>
           )}
 

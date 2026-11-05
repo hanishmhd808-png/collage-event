@@ -9,12 +9,13 @@ import { useApp } from "@/context/AppContext";
 import {
   Sparkles, Bell, Menu, X, Sun, Moon, LogOut, User,
   Calendar, Compass, LayoutDashboard, Zap, Settings,
-  ChevronDown, Award
+  ChevronDown, Award, Building2
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
 const NAV_LINKS = [
   { href: "/explore", label: "Explore Events", icon: Compass },
+  { href: "/colleges", label: "Colleges", icon: Building2 },
   { href: "/ai-studio", label: "AI Studio", icon: Zap },
 ];
 
@@ -29,6 +30,11 @@ const ORGANIZER_LINKS = [
 
 const TEACHER_LINKS = [
   { href: "/faculty", label: "Faculty", icon: Award },
+];
+
+const COLLEGE_ADMIN_LINKS = [
+  { href: "/organizer", label: "College Hub", icon: Settings },
+  { href: "/admin", label: "Admin", icon: Settings },
 ];
 
 const ADMIN_LINKS = [
@@ -56,6 +62,7 @@ export default function Navbar() {
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const getRoleLinks = () => {
+    if (role === "college_admin") return COLLEGE_ADMIN_LINKS;
     if (role === "teacher" || role === "faculty") return TEACHER_LINKS;
     if (role === "admin") return ADMIN_LINKS;
     if (role === "organizer") return ORGANIZER_LINKS;

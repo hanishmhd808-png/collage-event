@@ -10,11 +10,13 @@ import EventCard from "@/components/EventCard";
 import PopupAlert, { PopupAlertProps } from "@/components/PopupAlert";
 import ActivityCustomizerModal from "@/components/ActivityCustomizerModal";
 import CreateEventModal from "@/components/CreateEventModal";
+import { CampusEvent } from "@/types";
 import {
   Sparkles, ArrowRight, ChevronDown, Zap, Shield, Award,
   Users, Calendar, Star, Mail, Key, Lock, UserCircle, ShieldCheck,
   Cpu, Music, Dumbbell, BookOpen, Briefcase, Camera, Trophy, X,
-  Palette, User, CheckCircle2, Flame, HelpCircle, Info, Plus
+  Palette, User, CheckCircle2, Flame, HelpCircle, Info, Plus,
+  Building2, Globe, Clock, GraduationCap
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +39,83 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
   return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
 }
 
+function EventCountdownTimer({ event }: { event?: CampusEvent }) {
+  const router = useRouter();
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    if (!event) return;
+    const calculateTime = () => {
+      const target = new Date(`${event.date}T${event.time ? "09:00:00" : "09:00:00"}`).getTime();
+      const now = Date.now();
+      const diff = Math.max(0, target - now);
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+      });
+    };
+    calculateTime();
+    const interval = setInterval(calculateTime, 1000);
+    return () => clearInterval(interval);
+  }, [event]);
+
+  if (!event) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: 0.9 }}
+      className="max-w-3xl mx-auto mt-10 p-5 sm:p-6 rounded-3xl glass-dark border border-white/10 relative overflow-hidden shadow-2xl backdrop-blur-2xl"
+    >
+      <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+      <div className="flex flex-col md:flex-row items-center justify-between gap-5 relative z-10">
+        <div className="text-left w-full md:w-auto">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-[11px] uppercase tracking-widest text-blue-400 font-bold">Upcoming Flagship</span>
+            {event.isInterCollege && (
+              <span className="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/30 font-medium">
+                🌐 Inter-College
+              </span>
+            )}
+          </div>
+          <h3 className="text-lg sm:text-xl font-black text-white">{event.title}</h3>
+          <p className="text-white/50 text-xs mt-0.5">
+            Hosted by <strong className="text-white/80">{event.college || "KMCT College of Engineering"}</strong> • {event.venue}
+          </p>
+        </div>
+
+        {/* Countdown units */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {[
+            { label: "DAYS", val: timeLeft.days },
+            { label: "HRS", val: timeLeft.hours },
+            { label: "MIN", val: timeLeft.minutes },
+            { label: "SEC", val: timeLeft.seconds },
+          ].map((item, idx) => (
+            <div key={idx} className="flex flex-col items-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center text-lg sm:text-xl font-black text-white shadow-inner">
+                {String(item.val).padStart(2, "0")}
+              </div>
+              <span className="text-[9px] tracking-wider text-white/40 mt-1 font-bold">{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => router.push(`/events/${event.id}`)}
+          className="btn-primary py-2.5 px-5 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap w-full md:w-auto justify-center"
+        >
+          Register <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 const CATEGORIES = [
   { name: "Technical", icon: Cpu, color: "#0a84ff", bg: "rgba(10,132,255,0.1)", desc: "Hackathons, competitive programming, and robotics showcases." },
   { name: "Cultural", icon: Music, color: "#bf5af2", bg: "rgba(191,90,242,0.1)", desc: "Dance battles, live bands, stage theater, and fashion shows." },
@@ -57,7 +136,7 @@ const TESTIMONIALS = [
 export default function Home() {
   const { user, role, loginAsMockStudent, loginAsMockTeacher, loginAsMockOrganizer, loginAsMockAdmin, loginWithGoogle, loginWithEmail } = useAuth();
   const { showToast } = useToast();
-  const { events, myRegistrations } = useApp();
+  const { events, myRegistrations, colleges } = useApp();
   const router = useRouter();
 
   const [showLogin, setShowLogin] = useState(false);
@@ -113,10 +192,15 @@ export default function Home() {
 
   const [upcomingCategory, setUpcomingCategory] = useState("All");
 
+  const nearestEvent = events
+    .filter(e => e.status === "upcoming" || new Date(e.date) >= new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || events[0];
+
   const featuredEvents = events.filter(e => {
     const isUpcoming = e.status === "upcoming" || e.isFeatured;
     if (!isUpcoming) return false;
     if (upcomingCategory === "All") return true;
+    if (upcomingCategory === "Inter-College") return e.isInterCollege;
     return e.category.toLowerCase() === upcomingCategory.toLowerCase();
   }).slice(0, 6);
 
@@ -241,7 +325,7 @@ export default function Home() {
           </motion.div>
 
           {/* Headline */}
-          {["Your Campus.", "Your Events.", "One Intelligent Platform."].map((line, i) => (
+          {["Discover.", "Participate.", "Celebrate."].map((line, i) => (
             <motion.h1
               key={i}
               initial={{ opacity: 0, y: 40 }}
@@ -253,14 +337,21 @@ export default function Home() {
             </motion.h1>
           ))}
 
-          <motion.p initial={{ opacity: 0, y: 30 }} animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 30 }} transition={{ duration: 0.8, delay: 0.7 }} className="text-white/50 text-lg sm:text-xl mt-8 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Discover unforgettable experiences, customize arts & sports activities in single or group formats, and bring your entire campus together.
+          <motion.p initial={{ opacity: 0, y: 30 }} animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 30 }} transition={{ duration: 0.8, delay: 0.65 }} className="text-white/60 text-lg sm:text-2xl mt-6 mb-10 max-w-3xl mx-auto leading-relaxed font-light">
+            Explore college events, connect with communities, and never miss a moment.
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }} transition={{ duration: 0.6, delay: 0.9 }} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }} transition={{ duration: 0.6, delay: 0.8 }} className="flex flex-wrap gap-4 justify-center items-center">
             <Link href="/explore">
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="btn-primary px-8 py-4 text-base flex items-center justify-center gap-2 w-full sm:w-auto">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="btn-primary px-8 py-4 text-base flex items-center justify-center gap-2 rounded-2xl shadow-xl shadow-blue-600/30 w-full sm:w-auto">
                 Explore Events <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </Link>
+
+            <Link href="/colleges">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="px-8 py-4 text-base font-semibold text-white/90 bg-white/10 hover:bg-white/15 border border-white/20 rounded-2xl flex items-center justify-center gap-2 backdrop-blur-xl transition-all shadow-lg w-full sm:w-auto">
+                <Building2 className="w-4 h-4 text-sky-400" />
+                Join Your College
               </motion.button>
             </Link>
 
@@ -268,7 +359,7 @@ export default function Home() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setCreateEventOpen(true)}
-              className="px-8 py-4 text-base text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-violet-600/30 border border-violet-500/40 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 transition-all cursor-pointer w-full sm:w-auto"
+              className="px-6 py-4 text-base text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-violet-600/30 border border-violet-500/40 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 transition-all cursor-pointer w-full sm:w-auto"
             >
               <Plus className="w-5 h-5 text-white" />
               <span>Add Event</span>
@@ -295,11 +386,14 @@ export default function Home() {
                   },
                 });
               }}
-              className="btn-secondary px-8 py-4 text-base text-white border-white/20 hover:border-white/40 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="btn-secondary px-6 py-4 text-base text-white border-white/20 hover:border-white/40 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              Organize an Event
+              Organize
             </motion.button>
           </motion.div>
+
+          {/* Live Flagship Event Countdown Timer */}
+          <EventCountdownTimer event={nearestEvent} />
         </div>
 
         {/* Floating event mini-cards (Interactive with Pop-up Alert) */}
@@ -428,6 +522,124 @@ export default function Home() {
               <p className="text-white/40 text-sm group-hover:text-white/70">{s.label}</p>
             </motion.div>
           ))}
+        </div>
+      </section>
+
+      {/* ── PARTICIPATING COLLEGES SHOWCASE (MULTI-COLLEGE PLATFORM CORE) ── */}
+      <section className="py-24 px-6 relative overflow-hidden bg-gradient-to-b from-[#0a0a0f] via-[#0b0c16] to-[#0a0a0f] border-b border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3 uppercase tracking-wider">
+                <Globe className="w-3.5 h-3.5" /> Collegiate Network • Malappuram & Beyond
+              </div>
+              <h2 className="text-4xl sm:text-5xl font-black text-white">
+                Participating <span className="gradient-text">Colleges</span>
+              </h2>
+              <p className="text-white/50 text-base mt-2 max-w-2xl leading-relaxed">
+                Explore premier colleges, active campus unions, and cross-institutional events across Malappuram district.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Link href="/colleges">
+                <button className="px-6 py-3 rounded-2xl glass border border-white/10 text-white font-semibold text-sm hover:bg-white/10 flex items-center gap-2 transition-all hover:border-blue-500/30">
+                  <Building2 className="w-4 h-4 text-blue-400" />
+                  View All Colleges <ArrowRight className="w-4 h-4" />
+                </button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {colleges.slice(0, 7).map((col, i) => {
+              const activeCount = events.filter(e => e.collegeId === col.id || e.collegeCode === col.code).length;
+              return (
+                <motion.div
+                  key={col.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.06 }}
+                  whileHover={{ y: -6 }}
+                  onClick={() => router.push(`/colleges/${col.id}`)}
+                  className="glass-dark border border-white/10 hover:border-blue-500/40 rounded-3xl p-6 cursor-pointer group transition-all shadow-xl hover:shadow-2xl hover:shadow-blue-500/10 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="relative">
+                        <img
+                          src={col.logo}
+                          alt={col.name}
+                          className="w-14 h-14 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${col.id}/200/200`;
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Verified</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-blue-400 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
+                        {col.code}
+                      </span>
+                      <span className="text-xs text-white/40">{col.district}</span>
+                    </div>
+
+                    <h3 className="font-bold text-white text-base mb-1.5 group-hover:text-blue-400 transition-colors line-clamp-1">
+                      {col.name}
+                    </h3>
+                    <p className="text-white/50 text-xs line-clamp-2 leading-relaxed mb-4">
+                      {col.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs">
+                    <span className="text-white/60 font-medium">
+                      🔥 {activeCount || col.eventCount} Events
+                    </span>
+                    <span className="text-blue-400 font-semibold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      Explore ↗
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+
+            {/* Register College Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.45 }}
+              whileHover={{ y: -6 }}
+              onClick={() => {
+                showAlert({
+                  title: "Register Your Institution",
+                  message: "Join EVENTORA AI's multi-college network. College coordinators and student union representatives can onboard their campus, publish events, and issue verified certificates.",
+                  badge: "College Onboarding",
+                  type: "action",
+                  primaryAction: {
+                    label: "Go to College Directory",
+                    onClick: () => router.push("/colleges"),
+                  },
+                });
+              }}
+              className="glass border border-dashed border-white/20 hover:border-blue-400/50 rounded-3xl p-6 cursor-pointer flex flex-col items-center justify-center text-center group transition-all"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Plus className="w-6 h-6 text-blue-400" />
+              </div>
+              <h3 className="text-white font-bold text-base mb-1">Add Your College</h3>
+              <p className="text-white/40 text-xs max-w-xs leading-relaxed">
+                Connect your campus to the Malappuram district event network.
+              </p>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -625,7 +837,7 @@ export default function Home() {
 
           {/* Interactive Category Filter Pills */}
           <div className="flex flex-wrap items-center gap-2 mb-8">
-            {["All", "Technical", "Cultural", "Sports", "Workshop", "Arts"].map((cat) => (
+            {["All", "Inter-College", "Technical", "Cultural", "Sports", "Workshop", "Arts"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setUpcomingCategory(cat)}
@@ -635,7 +847,7 @@ export default function Home() {
                     : "glass border border-white/10 text-white/50 hover:text-white hover:bg-white/5"
                 }`}
               >
-                {cat}
+                {cat === "Inter-College" ? "🌐 Inter-College" : cat}
               </button>
             ))}
           </div>
@@ -907,7 +1119,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
               {[
-                { title: "Platform", links: [{ href: "/explore", label: "Explore Events" }, { href: "/ai-studio", label: "AI Studio" }, { href: "/dashboard", label: "Dashboard" }] },
+                { title: "Platform", links: [{ href: "/explore", label: "Explore Events" }, { href: "/colleges", label: "College Directory" }, { href: "/ai-studio", label: "AI Studio" }, { href: "/dashboard", label: "Dashboard" }] },
                 { title: "Resources", links: [{ href: "/certificates", label: "Certificates" }, { href: "/notifications", label: "Notifications" }, { href: "/organizer", label: "Organizer" }] },
                 { title: "Access", links: [{ href: "/login", label: "Sign In / Register" }, { href: "/admin", label: "Admin Suite" }, { href: "/faculty", label: "Faculty Portal" }] },
               ].map(col => (
@@ -921,7 +1133,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-white/5 pt-8 text-center text-white/20 text-sm">
-            © 2026 EVENTORA AI. All rights reserved. Built with ❤️ for campus communities.
+            © 2026 EVENTORA AI. All rights reserved. Connecting colleges across Kerala.
           </div>
         </div>
       </footer>
@@ -934,7 +1146,7 @@ export default function Home() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-black text-white">Welcome Back</h2>
-                  <p className="text-white/40 text-sm mt-1">Sign in to access your campus hub</p>
+                  <p className="text-white/40 text-sm mt-1">Sign in to your multi-college event hub</p>
                 </div>
                 <button onClick={() => setShowLogin(false)} className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"><X className="w-5 h-5" /></button>
               </div>
@@ -959,7 +1171,7 @@ export default function Home() {
               <div className="pt-2 border-t border-white/10">
                 <p className="text-white/30 text-xs text-center mb-3">Instant Demo Access</p>
                 <div className="grid grid-cols-3 gap-2 text-xs">
-                  <button onClick={() => { loginAsMockStudent(); setShowLogin(false); showToast("Logged in as Student", "success"); }} className="py-2 px-1 rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-blue-500/40 text-center transition-all">
+                  <button onClick={() => { loginAsMockStudent(); setShowLogin(false); showToast("Logged in as KMCT Student", "success"); }} className="py-2 px-1 rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-blue-500/40 text-center transition-all">
                     🎓 Student
                   </button>
                   <button onClick={() => { loginAsMockOrganizer(); setShowLogin(false); showToast("Logged in as Organizer", "success"); }} className="py-2 px-1 rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-violet-500/40 text-center transition-all">

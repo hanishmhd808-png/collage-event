@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { useApp } from "@/context/AppContext";
 import {
   Sparkles,
   ArrowLeft,
@@ -19,6 +20,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  Building2,
 } from "lucide-react";
 
 type AuthTab = "student" | "organizer" | "teacher_admin";
@@ -34,7 +36,9 @@ export default function LoginPage() {
     loginAsMockOrganizer,
     loginAsMockTeacher,
     loginAsMockAdmin,
+    loginAsCollegeAdmin,
   } = useAuth();
+  const { colleges } = useApp();
 
   const [activeTab, setActiveTab] = useState<AuthTab>("student");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -46,6 +50,8 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [regNo, setRegNo] = useState("");
   const [className, setClassName] = useState("");
+  const [selectedCollegeId, setSelectedCollegeId] = useState("col-kmct");
+  const [selectedCollegeName, setSelectedCollegeName] = useState("KMCT College of Engineering");
   const [passcode, setPasscode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -78,7 +84,9 @@ export default function LoginPage() {
         password,
         isSignUp ? name : undefined,
         isSignUp ? regNo : undefined,
-        isSignUp ? className : undefined
+        isSignUp ? className : undefined,
+        isSignUp ? selectedCollegeId : undefined,
+        isSignUp ? selectedCollegeName : undefined
       );
       setSuccessMsg(isSignUp ? "Account created successfully! Redirecting..." : "Welcome back! Redirecting...");
       setTimeout(() => router.push("/dashboard"), 700);
@@ -249,6 +257,27 @@ export default function LoginPage() {
                       </div>
                     </div>
 
+                    <div>
+                      <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-400" /> College / Institution *
+                      </label>
+                      <select
+                        value={selectedCollegeId}
+                        onChange={(e) => {
+                          setSelectedCollegeId(e.target.value);
+                          const col = colleges.find((c) => c.id === e.target.value);
+                          if (col) setSelectedCollegeName(col.name);
+                        }}
+                        className="w-full glass border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-blue-500/50 transition-colors bg-[#0c0e1a]"
+                      >
+                        {colleges.map((c) => (
+                          <option key={c.id} value={c.id} className="bg-[#0a0a0f] text-white">
+                            {c.name} ({c.code}) — {c.district}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-white/60 mb-1.5">Register Number</label>
@@ -404,6 +433,30 @@ export default function LoginPage() {
                 </div>
                 <span className="text-[11px] font-semibold text-blue-400 group-hover:translate-x-0.5 transition-transform">
                   1-Click Sign In →
+                </span>
+              </button>
+
+              {/* Instant College Admin Demo */}
+              <button
+                type="button"
+                onClick={() => {
+                  loginAsCollegeAdmin("col-kmct");
+                  setSuccessMsg("Logged in as KMCT College Administrator. Redirecting...");
+                  setTimeout(() => router.push("/colleges/col-kmct"), 500);
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/25 hover:border-violet-500/50 text-violet-300 text-xs font-medium transition-all group mt-2"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-violet-600/30 flex items-center justify-center font-bold text-[11px] text-violet-200">
+                    CA
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-white text-xs">College Lead: KMCT Admin</p>
+                    <p className="text-[10px] text-violet-300/70">KMCT College of Engineering • Malappuram</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-semibold text-violet-400 group-hover:translate-x-0.5 transition-transform">
+                  Campus Hub →
                 </span>
               </button>
             </div>
