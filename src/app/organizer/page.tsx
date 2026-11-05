@@ -74,7 +74,8 @@ export default function OrganizerPage() {
       registrationDeadline: form.registrationDeadline,
       eligibility: form.eligibility,
       certificateAvailable: form.certificateAvailable,
-      image: form.image,
+      image: form.image || "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format",
+      coverImage: form.image || "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format",
       tags: form.tags ? form.tags.split(",").map(t => t.trim()) : [],
       isFeatured: false,
       organizer: "Campus Event Organizer",
@@ -147,7 +148,7 @@ export default function OrganizerPage() {
                 <div className="space-y-3">
                   {myEvents.map((event, i) => (
                     <motion.div key={event.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="glass-dark border border-white/8 rounded-2xl p-4 flex items-center gap-4">
-                      {event.image && <img src={event.image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/56/56`; }} />}
+                      {(event.coverImage || event.image) && <img src={event.coverImage || event.image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/56/56`; }} />}
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-semibold truncate">{event.title}</p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-white/40">

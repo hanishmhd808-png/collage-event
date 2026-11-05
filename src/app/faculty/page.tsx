@@ -286,9 +286,9 @@ export default function FacultyPage() {
                       <tr key={e.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            {e.image && (
+                            {(e.coverImage || e.image) && (
                               <img
-                                src={e.image}
+                                src={e.coverImage || e.image}
                                 alt=""
                                 className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-white/10"
                                 onError={(err) => {

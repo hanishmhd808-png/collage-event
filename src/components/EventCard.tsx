@@ -57,10 +57,10 @@ export default function EventCard({ event, index = 0, compact = false }: EventCa
       className="glass-card overflow-hidden group cursor-pointer relative flex flex-col h-full hover:border-blue-500/40 transition-all shadow-lg hover:shadow-2xl hover:shadow-blue-500/10"
     >
       {/* Image Header */}
-      {event.image && !compact && (
+      {(event.coverImage || event.image) && !compact && (
         <div className="relative h-48 overflow-hidden bg-white/5">
           <motion.img
-            src={event.image}
+            src={event.coverImage || event.image}
             alt={event.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={(e) => {

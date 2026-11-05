@@ -407,7 +407,7 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {myEventDetails.map(({ reg, event }, i) => event && (
                 <motion.div key={reg.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-dark border border-white/8 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-                  {event.image && <img src={event.image} alt={event.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/64/64`; }} />}
+                  {(event.coverImage || event.image) && <img src={event.coverImage || event.image} alt={event.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/64/64`; }} />}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-white font-bold text-base truncate">{event.title}</p>

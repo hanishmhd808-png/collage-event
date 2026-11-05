@@ -21,9 +21,9 @@ function ListCard({ event }: { event: CampusEvent }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} whileHover={{ y: -2 }} className="glass-card overflow-hidden">
       <Link href={`/events/${event.id}`} className="flex flex-col sm:flex-row gap-4 p-4">
-        {event.image && (
+        {(event.coverImage || event.image) && (
           <img
-            src={event.image}
+            src={event.coverImage || event.image}
             alt={event.title}
             className="w-full sm:w-32 h-32 rounded-xl object-cover flex-shrink-0"
             onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/120/120`; }}

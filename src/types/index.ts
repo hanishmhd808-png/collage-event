@@ -78,8 +78,12 @@ export interface CampusEvent {
   description: string;
   longDescription?: string;
   image?: string;
+  coverImage?: string;
   organizer?: string;
   organizerId?: string;
+  facultyOrganizer?: string;
+  facultyDepartment?: string;
+  facultyDesignation?: string;
   maxSeats?: number;
   registeredCount?: number;
   registrationDeadline?: string;

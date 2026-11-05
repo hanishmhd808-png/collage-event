@@ -56,6 +56,19 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+function sanitizeForFirestore(obj: any): any {
+  if (obj === undefined) return null;
+  if (obj === null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeForFirestore).filter((v) => v !== undefined);
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) {
+      out[k] = sanitizeForFirestore(v);
+    }
+  }
+  return out;
+}
+
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, studentProfile } = useAuth();
 
@@ -172,15 +185,29 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubEvents = onSnapshot(
       collection(db, "events"),
       (snapshot) => {
-        if (snapshot.docs.length > 0) {
-          const dbEvts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CampusEvent));
-          setEvents(dbEvts);
-          if (typeof window !== "undefined") {
-            try { localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(dbEvts)); } catch {}
-          }
+        if (!snapshot.empty) {
+          const dbEvts = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              ...data,
+              id: doc.id,
+              coverImage: data.coverImage || data.image,
+              image: data.image || data.coverImage,
+            } as CampusEvent;
+          });
+          setEvents(prev => {
+            const mergedMap = new Map<string, CampusEvent>();
+            prev.forEach(ev => mergedMap.set(ev.id, ev));
+            dbEvts.forEach(ev => mergedMap.set(ev.id, ev));
+            const merged = Array.from(mergedMap.values());
+            if (typeof window !== "undefined") {
+              try { localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(merged)); } catch {}
+            }
+            return merged;
+          });
         }
       },
-      () => {}
+      (err) => console.warn("Firestore events onSnapshot error:", err)
     );
 
     const unsubRegs = onSnapshot(
@@ -246,24 +273,50 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const addEvent = async (e: CampusEvent) => {
-    const updated = [...events, e];
+    const eventWithCover: CampusEvent = {
+      ...e,
+      coverImage: e.coverImage || e.image,
+      image: e.image || e.coverImage,
+    };
+    const updated = [eventWithCover, ...events.filter(ev => ev.id !== e.id)];
     setEvents(updated);
     if (typeof window !== "undefined") {
-      try { localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(updated)); } catch (err) {
+        console.warn("localStorage quota exceeded or failed:", err);
+      }
     }
     if (db) {
-      try { await setDoc(doc(db, "events", e.id), e); } catch {}
+      try {
+        const cleaned = sanitizeForFirestore(eventWithCover);
+        await setDoc(doc(db, "events", eventWithCover.id), cleaned);
+        console.log("Successfully stored event with cover image in Cloud Firestore:", eventWithCover.id);
+      } catch (err) {
+        console.error("Cloud Firestore setDoc failed for event:", err);
+      }
     }
   };
 
   const updateEvent = async (id: string, updatedEvent: Partial<CampusEvent>) => {
-    const updated = events.map(e => e.id === id ? { ...e, ...updatedEvent } : e);
+    const updated = events.map(e => {
+      if (e.id === id) {
+        const next = { ...e, ...updatedEvent };
+        if (updatedEvent.coverImage && !updatedEvent.image) next.image = updatedEvent.coverImage;
+        if (updatedEvent.image && !updatedEvent.coverImage) next.coverImage = updatedEvent.image;
+        return next;
+      }
+      return e;
+    });
     setEvents(updated);
     if (typeof window !== "undefined") {
       try { localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(updated)); } catch {}
     }
     if (db) {
-      try { await updateDoc(doc(db, "events", id), updatedEvent as Record<string, unknown>); } catch {}
+      try {
+        const cleaned = sanitizeForFirestore(updatedEvent);
+        await updateDoc(doc(db, "events", id), cleaned as Record<string, unknown>);
+      } catch (err) {
+        console.error("Cloud Firestore updateDoc failed for event:", err);
+      }
     }
   };
 

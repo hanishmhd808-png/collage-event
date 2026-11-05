@@ -10,7 +10,7 @@ import { useToast } from "@/context/ToastContext";
 import {
   Calendar, MapPin, Users, Clock, Award, ChevronLeft, Share2, Heart,
   CheckCircle, AlertCircle, Ticket, User, Palette, Trophy, Sparkles,
-  Edit3, Check, Building2, Globe, CheckCircle2
+  Edit3, Check, Building2, Globe, CheckCircle2, GraduationCap
 } from "lucide-react";
 import { DEFAULT_ARTS_ACTIVITIES, DEFAULT_SPORTS_ACTIVITIES } from "@/lib/mockData";
 
@@ -253,8 +253,8 @@ export default function EventDetailPage() {
     <div className="bg-[#0a0a0f] min-h-screen">
       {/* Banner */}
       <div className="relative h-[50vh] overflow-hidden">
-        {event.image ? (
-          <img src={event.image} alt={event.title} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/1200/600`; }} />
+        {(event.coverImage || event.image) ? (
+          <img src={event.coverImage || event.image} alt={event.title} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${event.id}/1200/600`; }} />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-blue-900 to-violet-900" />
         )}
@@ -363,6 +363,26 @@ export default function EventDetailPage() {
                           <p className="text-white/60 text-xs mt-1 leading-relaxed">
                             Organized exclusively for enrolled students and faculty members of {organizingCollege?.name || event.college || "the host institution"}.
                           </p>
+                        </div>
+                      </div>
+                    )}
+                    {event.facultyOrganizer && (
+                      <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
+                          <GraduationCap className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-blue-300 text-xs font-semibold uppercase tracking-wider">
+                            Faculty Convener & In-Charge
+                          </p>
+                          <p className="text-white font-bold text-sm">
+                            {event.facultyOrganizer}
+                          </p>
+                          {(event.facultyDepartment || event.facultyDesignation) && (
+                            <p className="text-white/50 text-xs mt-0.5">
+                              {event.facultyDepartment} {event.facultyDesignation ? `• ${event.facultyDesignation}` : ""}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
